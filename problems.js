@@ -928,5 +928,144 @@ const PROBLEMS = [
     solution: `<p>People are not being irrational — the resolution (due to Bernoulli) is that rational agents maximize expected <strong>utility</strong>, not expected dollars, and the utility of money is <em>concave</em>: each additional dollar is worth less than the last. With, say, logarithmic utility, the sum <code>½·log 2 + ¼·log 4 + …</code> converges to a finite, modest value, so a rational person pays only a small amount. The infinite expected value comes from vanishingly unlikely astronomical payoffs that contribute almost nothing in utility. Raw expected value ignored both diminishing returns and risk.</p>`,
     probe: "Ask 'is expected monetary value even the right objective, or should I weight outcomes by their actual value to me?' — switching to expected utility dissolves the paradox.",
     lesson: "Expected value can mislead when outcomes span extreme magnitudes with diminishing importance — maximize expected utility and account for risk instead. This distinction underpins economics, decision theory, and reward design in reinforcement learning (why we sometimes reshape or clip rewards)."
+  },
+
+  {
+    id: "rats-injections",
+    title: "240 injections, 5 rats, 48 hours",
+    category: "Puzzles",
+    difficulty: "Hard",
+    prompt: `<p>A lab has 240 injections; exactly one contains an anaesthetic. You have 5 rats and 48 hours. If a rat receives the anaesthetic it faints within 24 hours and can't be reused; a rat can be given several injections (at different times) until it faints. How do you find the anaesthetic injection within 48 hours?</p>`,
+    hints: [
+      "You have two time windows (day 1 and day 2) and 5 rats. Each rat's fate after 48 hours isn't just alive/dead — it can faint on day 1, faint on day 2, or never faint. That's three outcomes per rat.",
+      "This is the poisoned-wine puzzle with a twist: each rat is now a base-3 digit, not a bit, because time gives a third state. How many injections can 5 base-3 digits label?",
+      "Number each injection with a 5-digit base-3 code. Digit for rat i: 0 = never inject, 1 = inject on day 1, 2 = inject on day 2. Read each rat's fainting time back as its digit."
+    ],
+    solution: `<p>Give each injection a unique <strong>5-digit base-3 code</strong> (digits 0, 1, 2). Rat <code>i</code> corresponds to digit position <code>i</code>: a <strong>0</strong> means never give that injection to rat <code>i</code>, a <strong>1</strong> means give it on day 1, a <strong>2</strong> means give it on day 2 (after 24 h).</p>
+      <p>After 48 hours read each rat: fainted in the first 24 h → its digit was 1; fainted in the second 24 h → digit 2; never fainted → digit 0. The five digits spell the base-3 code of the anaesthetic injection. Capacity: <code>3⁵ = 243 ≥ 240</code>, so 5 rats suffice. (The binary poisoned-wine puzzle used 2 states per tester; adding a second day gives a <em>third</em> state, so you count in base 3 instead of base 2.)</p>`,
+    probe: "Ask 'how many distinguishable outcomes can each tester produce?' — here time turns each rat from a 2-state bit into a 3-state (base-3) digit, so 5 rats encode 3⁵ possibilities.",
+    lesson: "The information capacity of a test is the number of distinguishable outcomes it can produce, and you can often manufacture extra outcomes (here, timing) to raise the base. k testers with b outcomes each identify one item among bᵏ. This base-b encoding generalizes the binary trick behind [[poisoned-wine]] and error-correcting codes."
+  },
+
+  {
+    id: "counterfeit-coin-stacks",
+    title: "Ten stacks, one counterfeit, one weighing",
+    category: "Puzzles",
+    difficulty: "Medium",
+    prompt: `<p>You have 10 stacks of coins. Every genuine coin weighs 10 grams, but one entire stack is counterfeit — each of its coins weighs 11 grams. You have a <em>digital scale</em> (it reads exact weight, not just balance) that you may use exactly <strong>once</strong>. Identify the counterfeit stack.</p>`,
+    hints: [
+      "One weighing on a digital scale gives you a whole number, not just a comparison. How can you make that number encode which stack is fake?",
+      "Take a different, known quantity of coins from each stack so each stack contributes a distinguishable amount to the total excess weight.",
+      "Take 1 coin from stack 1, 2 from stack 2, …, 10 from stack 10. The grams over the expected total tell you the stack number directly."
+    ],
+    solution: `<p>Take 1 coin from stack 1, 2 coins from stack 2, 3 from stack 3, …, 10 from stack 10 — that's <code>1+2+…+10 = 55</code> coins. If all were genuine they'd weigh <code>550 g</code>. Weigh the pile once. The excess over 550 g tells you the counterfeit stack: if stack <code>k</code> is fake, exactly <code>k</code> of the coins are 1 g too heavy, so the scale reads <code>550 + k</code>. An excess of 3 g means stack 3, and so on.</p>`,
+    probe: "Ask 'what does a single exact-number reading let me encode that a yes/no comparison can't?' — give each stack a unique weight-contribution so the total's excess names the culprit.",
+    lesson: "A measurement that returns a rich value (a real number) can encode far more than a binary comparison — assign each source a distinct 'signature' so one reading disentangles them. This positional-encoding idea powers checksums, and superimposed/combinatorial group testing."
+  },
+
+  {
+    id: "prisoners-hats-line",
+    title: "100 hats in a line",
+    category: "Logic",
+    difficulty: "Hard",
+    prompt: `<p>100 prisoners stand in a line. Each wears a red or blue hat and can see the hats of everyone <em>in front</em> of them but not their own or those behind. Starting from the back, each prisoner in turn calls out a single color, heard by all. Every correct call is a life saved. They may agree on a strategy beforehand. How many can they <strong>guarantee</strong> to save?</p>`,
+    hints: [
+      "The back prisoner sees the most hats but gets no information about their own. Could they sacrifice their guess to transmit information to everyone else?",
+      "One bit — even/odd — can summarize all the hats a prisoner sees. What if the back prisoner announces the parity of the red hats in front of them?",
+      "The back prisoner calls the parity of red hats they see (a 50/50 gamble for themselves). Each subsequent prisoner tracks the parity and, using the calls they've heard plus the hats they see, deduces their own hat exactly."
+    ],
+    solution: `<p>They can guarantee <strong>99</strong> saved (and the 100th has a 50% chance). Strategy: the back prisoner counts the red hats they can see and calls "red" if that count is odd, "blue" if even — encoding the parity of all 99 hats ahead. This call has only a 50/50 chance of matching their own hat, so they're the one gamble.</p>
+      <p>Now every other prisoner can deduce their own hat with certainty. The 99th prisoner sees the 98 hats ahead and knows the announced parity, so the parity of (their own hat + the hats ahead) must match — they solve for their own hat. As each prisoner ahead calls out their (correct) color, everyone updates the running parity, so each in turn can subtract off what they see and hear to determine their own hat exactly.</p>`,
+    probe: "Ask 'can one prisoner spend their own guess to broadcast a summary (parity) that lets everyone else deduce their answer?' — sacrifice one to inform the ninety-nine.",
+    lesson: "A single parity bit can carry global information that, combined with local observations, lets many agents each recover a private unknown. Sacrificing one degree of freedom to transmit a checksum is the core idea behind parity bits, error detection, and many distributed protocols."
+  },
+
+  {
+    id: "three-way-duel",
+    title: "The three-way duel",
+    category: "Game Theory",
+    difficulty: "Hard",
+    prompt: `<p>Three gunfighters duel. Abe hits his target 1/3 of the time, Bob 2/3 of the time, and Carl never misses. They take turns firing one shot, in order of <em>worst shooter first</em> (Abe, then Bob, then Carl), repeating until one remains. Each plays optimally to maximize their own survival. What should Abe do on his first shot?</p>`,
+    hints: [
+      "Consider Abe's options: shoot Bob, shoot Carl, or deliberately miss. Play out what happens after each — especially who then wants to shoot whom.",
+      "If Abe kills someone, the survivor is the more dangerous shooter, and it becomes their turn to shoot Abe. Being the one who 'thins the herd' can backfire.",
+      "Abe should intentionally miss (shoot into the air). Then Bob and Carl, the two strong shooters, target each other first — and Abe gets the next shot at whoever survives."
+    ],
+    solution: `<p>Abe should <strong>deliberately miss</strong> — fire into the air. Reason through the alternatives: if Abe shoots and kills Carl, then Bob (2/3) shoots at Abe; if Abe kills Bob, then Carl (perfect) kills Abe for sure. Either way, by eliminating one rival Abe hands the surviving strong shooter a free shot at him.</p>
+      <p>By missing on purpose, Abe forces Bob and Carl to deal with each other: on Bob's turn he'll shoot at Carl (his biggest threat), and Carl shoots at Bob. Whoever survives that exchange, Abe then gets the next shot at a single opponent — a far better position than provoking a strong shooter while two rivals still stand. Counter-intuitively, the weakest player's best move is to not participate.</p>`,
+    probe: "Ask 'if I succeed at the obvious move, who benefits and whose turn is it next?' — sometimes acting makes you the next target, and the optimal move is to do nothing.",
+    lesson: "Optimal play isn't always aggressive — improving your position can worsen your standing if it strengthens or empowers an opponent. Reasoning about who becomes the target next (and letting rivals weaken each other) is central to game theory, competitive strategy, and even coalition dynamics."
+  },
+
+  {
+    id: "two-hourglasses",
+    title: "Two hourglasses, nine minutes",
+    category: "Puzzles",
+    difficulty: "Medium",
+    prompt: `<p>You have a 4-minute hourglass and a 7-minute hourglass, and no other timer. Measure out exactly <strong>9 minutes</strong>.</p>`,
+    hints: [
+      "Start both at once and track the events (when each runs out). Flipping a glass reverses whatever sand has accumulated, which lets you measure leftover amounts.",
+      "9 = 7 + 2. Can you isolate a 2-minute interval to add after the 7-minute glass finishes?",
+      "When the 7-min glass empties, the 4-min glass has 1 min of sand left; use the running glasses so that a 1-minute remainder can be flipped into another minute."
+    ],
+    solution: `<p>Start both hourglasses together at <code>t = 0</code>.</p>
+      <ul>
+        <li><code>t = 4</code>: the 4-min glass empties — flip it immediately.</li>
+        <li><code>t = 7</code>: the 7-min glass empties. The 4-min glass (running since t=4) has 1 minute of sand left in the top.</li>
+        <li><code>t = 8</code>: the 4-min glass empties (that last minute ran out). The 7-min glass has now been idle-or-running... — flip the 7-min glass at t=7 when it empties, so by t=8 it holds 1 minute of sand in the bottom. Flip it again at t=8, and that 1 minute runs out at <code>t = 9</code>.</li>
+      </ul>
+      <p>So: at t=7 flip the 7-min glass; at t=8 (when the 4-min glass empties) flip the 7-min glass once more — it has exactly 1 minute of sand to run, finishing at <strong>t = 9</strong>.</p>`,
+    probe: "Ask 'what leftover amounts do the running glasses expose, and can flipping turn a remainder into the exact extra interval I need?' — the 1-minute remainder is the key resource.",
+    lesson: "Combine and re-use partial states rather than measuring each interval from scratch — flipping an hourglass converts elapsed time into remaining time, letting you synthesize values (like 9 = 7 + 2) neither glass measures directly. Composing operations on intermediate state is a recurring problem-solving move."
+  },
+
+  {
+    id: "secure-average",
+    title: "Average salary, no one reveals theirs",
+    category: "Algorithms",
+    difficulty: "Medium",
+    prompt: `<p>A group of coworkers want to know their <em>average</em> salary, but nobody is willing to reveal their own salary to anyone else (and there's no trusted third party). How can they compute the true average so that no participant learns anything about any individual's salary?</p>`,
+    hints: [
+      "If they just summed openly, each person's number would be exposed. Can the first person hide their real value behind something only they know?",
+      "Have the first person add a secret random number to their salary before passing a running total around the circle.",
+      "Person 1 secretly picks a large random R, adds their salary, and passes the sum on; each person adds their salary and passes it along; person 1 subtracts R at the end and divides by n."
+    ],
+    solution: `<p>Person 1 secretly picks a large random number <code>R</code>, adds their own salary, and privately passes the total to person 2. Each subsequent person adds their own salary to the running total and passes it on, around the full circle back to person 1. Person 1 then subtracts <code>R</code> from the final total (recovering the true sum of all salaries) and divides by <code>n</code> to get the average, which they announce.</p>
+      <p>No one learns any individual salary: every number passed is masked by the unknown <code>R</code> plus a mix of others' salaries, so an intermediate total reveals nothing about any single person. Only aggregate information (the average) is disclosed.</p>`,
+    probe: "Ask 'can I mask each private value with a secret that cancels out in the final aggregate?' — a random offset hides individuals while leaving the sum recoverable by its creator.",
+    lesson: "You can compute an aggregate over private data without exposing the inputs by masking each with randomness that cancels in the result — the founding idea of secure multiparty computation and secret sharing. It underlies privacy-preserving analytics and federated learning."
+  },
+
+  {
+    id: "airplane-seats",
+    title: "The lost boarding pass",
+    category: "Probability",
+    difficulty: "Hard",
+    prompt: `<p>100 passengers board a full flight (100 seats, one assigned per passenger). The first passenger lost their boarding pass and sits in a <em>random</em> seat. Each later passenger sits in their own assigned seat if it's free, otherwise picks a random free seat. What is the probability that the <strong>100th</strong> passenger ends up in their own assigned seat?</p>`,
+    hints: [
+      "Don't try to track all 100 boardings — look for a symmetry between just two special seats.",
+      "The only seats whose fate matters are passenger 1's seat and passenger 100's seat. The chaos ends the moment one of those two is taken.",
+      "By symmetry, the first time someone must sit in one of those two seats, each is equally likely to be the one taken. So the answer is exactly 1/2."
+    ],
+    solution: `<p>The probability is exactly <strong>1/2</strong>, regardless of the number of passengers. The key: the only two seats that ultimately matter are <em>passenger 1's seat</em> and <em>passenger 100's seat</em>. Every displaced passenger either sits in their own seat (postponing the resolution) or randomly grabs one of these two special seats, which ends the process.</p>
+      <p>Whenever someone is forced to choose randomly and picks one of the two special seats, seat 1 and seat 100 are equally likely to be the one chosen (perfect symmetry — nothing distinguishes them). If seat 1 gets taken first, everyone including passenger 100 ends up correctly seated; if seat 100 is taken first, passenger 100 is displaced. Equal odds → <code>1/2</code>.</p>`,
+    probe: "Ask 'which few outcomes actually decide the answer, and are they symmetric?' — ignore the 98 irrelevant seats and notice seats 1 and 100 are interchangeable, forcing a 1/2 split.",
+    lesson: "Collapse a complex process to the small set of events that actually determine the outcome, then exploit symmetry between them. Recognizing that most of the apparent complexity is irrelevant 'postponement' is a powerful simplification, echoing the [[ants-on-a-stick]] relabeling trick."
+  },
+
+  {
+    id: "russian-roulette",
+    title: "Spin, or pull again?",
+    category: "Probability",
+    difficulty: "Medium",
+    prompt: `<p>A revolver has 6 chambers with two bullets loaded in <em>adjacent</em> chambers; the rest are empty. The cylinder is spun once, the trigger pulled — <em>click</em>, an empty chamber. You must face one more trigger pull. Are you safer if the cylinder is <strong>spun again</strong> first, or if the trigger is simply <strong>pulled again</strong> without spinning?</p>`,
+    hints: [
+      "Spinning re-randomizes: probability of a bullet is just 2/6 = 1/3. Compare that to pulling the next chamber in sequence, given the first was empty.",
+      "Label the chambers 1–6 with bullets in chambers 1 and 2. The first pull was empty, so you were on one of the four empty chambers (3, 4, 5, 6) — each equally likely. What comes next in each case?",
+      "From 3→4 (empty), 4→5 (empty), 5→6 (empty), 6→1 (bullet). So only 1 of the 4 equally likely empty starts leads to a bullet next: 1/4 < 1/3."
+    ],
+    solution: `<p><strong>Don't spin — pull again.</strong> If you spin, the bullet probability resets to <code>2/6 = 1/3</code>. If you don't spin, condition on the fact that the first pull was empty. Label the chambers 1–6 with bullets in 1 and 2; the empty chambers are 3, 4, 5, 6, and the first empty pull leaves you equally likely to have been on any of them. The <em>next</em> chamber is: 3→4 (empty), 4→5 (empty), 5→6 (empty), 6→1 (bullet). Only 1 of those 4 equally likely cases fires, so the probability of a bullet is <code>1/4</code>. Since <code>1/4 &lt; 1/3</code>, pulling again is safer.</p>`,
+    probe: "Ask 'does the earlier outcome give me information I'd be throwing away by re-randomizing?' — the empty first pull rules out chambers and shifts the odds; spinning discards that evidence.",
+    lesson: "Because the bullets are adjacent, an empty pull is informative — it makes the next chamber more likely to also be empty. Conditioning on observed evidence (rather than resetting to the prior) is the heart of Bayesian updating; re-randomizing throws away hard-won information."
   }
 ];

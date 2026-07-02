@@ -4,6 +4,8 @@
   "use strict";
 
   const STORAGE_KEY = "intuition-trainer-progress-v1";
+
+  // Puzzle DOM
   const listEl = document.getElementById("problemList");
   const filtersEl = document.getElementById("categoryFilters");
   const emptyNote = document.getElementById("emptyNote");
@@ -11,23 +13,66 @@
   const totalCountEl = document.getElementById("totalCount");
   const resetBtn = document.getElementById("resetProgress");
 
+  // View DOM
+  const viewTabs = document.getElementById("viewTabs");
+  const puzzlesView = document.getElementById("puzzlesView");
+  const tracksView = document.getElementById("tracksView");
+  const introPuzzles = document.getElementById("introPuzzles");
+  const introTracks = document.getElementById("introTracks");
+
+  // Tracks DOM
+  const trackListEl = document.getElementById("trackList");
+  const trackDetailEl = document.getElementById("trackDetail");
+
   let state = loadState();
   let activeCategory = "All";
 
   function loadState() {
+    let s;
     try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEY)) || { solved: {} };
+      s = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
     } catch (e) {
-      return { solved: {} };
+      s = {};
     }
+    if (!s.solved) s.solved = {};
+    if (!s.tracks) s.tracks = {}; // { trackId: { revealed: n, done: bool } }
+    return s;
   }
   function saveState() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch (e) {
-      /* storage may be unavailable (e.g. file:// in some browsers) — degrade silently */
+      /* storage may be unavailable; degrade silently */
     }
   }
+
+  /* ---------- shared helpers ---------- */
+
+  function escapeText(text) {
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+  }
+  // Plain text with `backtick` code spans -> HTML.
+  function escapeToHtml(text) {
+    return escapeText(text).replace(/`([^`]+)`/g, "<code>$1</code>");
+  }
+
+  function makeReveal(kind, label, innerHTML) {
+    const wrap = document.createElement("div");
+    wrap.className = "reveal " + kind;
+    const lab = document.createElement("div");
+    lab.className = "reveal-label";
+    lab.textContent = label;
+    const content = document.createElement("div");
+    content.className = "reveal-content";
+    content.innerHTML = innerHTML;
+    wrap.appendChild(lab);
+    wrap.appendChild(content);
+    return wrap;
+  }
+
+  /* ================= PUZZLES ================= */
 
   function categories() {
     const set = new Set(PROBLEMS.map((p) => p.category));
@@ -55,26 +100,11 @@
     });
   }
 
-  function makeReveal(kind, label, innerHTML) {
-    const wrap = document.createElement("div");
-    wrap.className = "reveal " + kind;
-    const lab = document.createElement("div");
-    lab.className = "reveal-label";
-    lab.textContent = label;
-    const content = document.createElement("div");
-    content.className = "reveal-content";
-    content.innerHTML = innerHTML;
-    wrap.appendChild(lab);
-    wrap.appendChild(content);
-    return wrap;
-  }
-
   function renderCard(p) {
     const card = document.createElement("article");
     card.className = "card" + (state.solved[p.id] ? " solved" : "");
     card.id = "problem-" + p.id;
 
-    // Head
     const head = document.createElement("div");
     head.className = "card-head";
     const titles = document.createElement("div");
@@ -84,8 +114,8 @@
     const tags = document.createElement("div");
     tags.className = "tags";
     tags.innerHTML =
-      `<span class="tag cat">${p.category}</span>` +
-      `<span class="tag diff-${p.difficulty}">${p.difficulty}</span>`;
+      `<span class="tag cat">${escapeText(p.category)}</span>` +
+      `<span class="tag diff-${p.difficulty}">${escapeText(p.difficulty)}</span>`;
     titles.appendChild(h2);
     titles.appendChild(tags);
     head.appendChild(titles);
@@ -96,7 +126,6 @@
     head.appendChild(check);
     card.appendChild(head);
 
-    // Body
     const body = document.createElement("div");
     body.className = "card-body";
 
@@ -112,16 +141,12 @@
       body.appendChild(dia);
     }
 
-    // Reveal container (hints/solution/takeaway get appended here)
     const revealZone = document.createElement("div");
-
-    // Actions
     const actions = document.createElement("div");
     actions.className = "actions";
 
     const hints = p.hints || [];
     let hintsShown = 0;
-
     const hintBtn = document.createElement("button");
     hintBtn.className = "btn";
     const hintCounter = document.createElement("span");
@@ -140,14 +165,11 @@
         hintBtn.textContent = hintsShown === 0 ? "Show a hint" : "Next hint";
       }
     }
-
     hintBtn.addEventListener("click", () => {
       if (hintsShown >= hints.length) return;
       const h = hints[hintsShown];
       hintsShown += 1;
-      revealZone.appendChild(
-        makeReveal("hint", `Hint ${hintsShown}`, escapeToHtml(h))
-      );
+      revealZone.appendChild(makeReveal("hint", `Hint ${hintsShown}`, escapeToHtml(h)));
       updateHintUI();
     });
 
@@ -159,18 +181,13 @@
       if (solutionShown) return;
       solutionShown = true;
       solveBtn.disabled = true;
-
       revealZone.appendChild(makeReveal("solution", "Solution", p.solution));
-
-      // The signature feature: the question you could have asked yourself.
       const takeawayHtml =
         `<p class="probe">“${escapeText(p.probe)}”</p>` +
         `<p class="lesson">${p.lesson}</p>`;
       revealZone.appendChild(
         makeReveal("takeaway", "The question you could have asked yourself", takeawayHtml)
       );
-
-      // Offer to mark solved
       markBtn.style.display = "";
     });
 
@@ -202,16 +219,6 @@
     return card;
   }
 
-  // Hints are plain text; escape then allow inline <code> written literally as backticks.
-  function escapeToHtml(text) {
-    return escapeText(text).replace(/`([^`]+)`/g, "<code>$1</code>");
-  }
-  function escapeText(text) {
-    const div = document.createElement("div");
-    div.textContent = text;
-    return div.innerHTML;
-  }
-
   function renderProblems() {
     listEl.innerHTML = "";
     const filtered = PROBLEMS.filter(
@@ -225,16 +232,291 @@
     filtered.forEach((p) => listEl.appendChild(renderCard(p)));
   }
 
+  /* ================= DISCOVERY TRACKS ================= */
+
+  function trackProgress(track) {
+    const t = state.tracks[track.id] || {};
+    return { revealed: t.revealed || 0, done: !!t.done };
+  }
+  function setTrackProgress(track, revealed, done) {
+    state.tracks[track.id] = { revealed: revealed, done: done };
+    saveState();
+  }
+
+  function renderTrackList() {
+    trackDetailEl.hidden = true;
+    trackDetailEl.innerHTML = "";
+    trackListEl.hidden = false;
+    trackListEl.innerHTML = "";
+
+    if (typeof TRACKS === "undefined" || !TRACKS.length) {
+      trackListEl.innerHTML = `<p class="empty-note">No tracks yet.</p>`;
+      return;
+    }
+
+    TRACKS.forEach((track) => {
+      const prog = trackProgress(track);
+      const total = track.steps.length;
+      const card = document.createElement("article");
+      card.className = "card track-card" + (prog.done ? " solved" : "");
+
+      let statusLabel, btnLabel;
+      if (prog.done) {
+        statusLabel = "✓ Completed";
+        btnLabel = "Review";
+      } else if (prog.revealed > 0) {
+        statusLabel = `${prog.revealed} / ${total} steps`;
+        btnLabel = "Resume";
+      } else {
+        statusLabel = `${total} steps`;
+        btnLabel = "Start track";
+      }
+
+      card.innerHTML =
+        `<div class="card-head">
+           <div class="card-titles">
+             <h2>${escapeText(track.title)}</h2>
+             <div class="tags">
+               <span class="tag cat">${escapeText(track.category)}</span>
+               <span class="tag diff-Core">${escapeText(track.difficulty || "Core")}</span>
+               <span class="tag track-status">${statusLabel}</span>
+             </div>
+           </div>
+           <div class="solved-check">${prog.done ? "✓" : ""}</div>
+         </div>`;
+
+      const body = document.createElement("div");
+      body.className = "card-body";
+      const blurb = document.createElement("p");
+      blurb.className = "prompt";
+      blurb.textContent = track.blurb;
+      body.appendChild(blurb);
+
+      const actions = document.createElement("div");
+      actions.className = "actions";
+      const startBtn = document.createElement("button");
+      startBtn.className = "btn primary";
+      startBtn.textContent = btnLabel;
+      startBtn.addEventListener("click", () => openTrack(track));
+      actions.appendChild(startBtn);
+      body.appendChild(actions);
+
+      card.appendChild(body);
+      trackListEl.appendChild(card);
+    });
+  }
+
+  function openTrack(track) {
+    trackListEl.hidden = true;
+    trackDetailEl.hidden = false;
+    trackDetailEl.innerHTML = "";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    // Back link
+    const back = document.createElement("button");
+    back.className = "btn ghost back-btn";
+    back.textContent = "← All tracks";
+    back.addEventListener("click", renderTrackList);
+    trackDetailEl.appendChild(back);
+
+    // Header card
+    const header = document.createElement("div");
+    header.className = "track-header";
+    header.innerHTML =
+      `<h2>${escapeText(track.title)}</h2>
+       <div class="tags">
+         <span class="tag cat">${escapeText(track.category)}</span>
+         <span class="tag diff-Core">${escapeText(track.difficulty || "Core")}</span>
+       </div>
+       <div class="track-intro">${track.intro}</div>`;
+    trackDetailEl.appendChild(header);
+
+    // Progress dots
+    const dots = document.createElement("div");
+    dots.className = "step-dots";
+    track.steps.forEach((_, i) => {
+      const d = document.createElement("span");
+      d.className = "step-dot";
+      d.dataset.index = String(i);
+      dots.appendChild(d);
+    });
+    trackDetailEl.appendChild(dots);
+
+    // Steps container
+    const stepsWrap = document.createElement("div");
+    stepsWrap.className = "steps-wrap";
+    trackDetailEl.appendChild(stepsWrap);
+
+    const synthWrap = document.createElement("div");
+    trackDetailEl.appendChild(synthWrap);
+
+    const prog = trackProgress(track);
+    let revealed = prog.revealed; // number of steps already revealed
+
+    function refreshDots(current) {
+      dots.querySelectorAll(".step-dot").forEach((d, i) => {
+        d.classList.toggle("done", i < revealed);
+        d.classList.toggle("current", i === current);
+      });
+    }
+
+    function showSynthesis() {
+      if (synthWrap.querySelector(".track-synthesis")) return;
+      const s = document.createElement("div");
+      s.className = "track-synthesis";
+      const badge = document.createElement("div");
+      badge.className = "synthesis-badge";
+      badge.textContent = "What you just rediscovered";
+      const content = document.createElement("div");
+      content.className = "synthesis-content";
+      content.innerHTML = track.synthesis + (track.connects ? track.connects : "");
+      s.appendChild(badge);
+      s.appendChild(content);
+      synthWrap.appendChild(s);
+
+      revealed = track.steps.length;
+      setTrackProgress(track, revealed, true);
+      refreshDots(-1);
+    }
+
+    // Render one step. mode: "revealed" (already done) or "active" (interactive)
+    function renderStep(i, mode) {
+      const step = track.steps[i];
+      const el = document.createElement("div");
+      el.className = "step-card";
+      el.id = "step-" + track.id + "-" + i;
+
+      const head = document.createElement("div");
+      head.className = "step-head";
+      head.innerHTML =
+        `<span class="step-num">Step ${i + 1}</span>` +
+        `<span class="step-title">${escapeText(step.title)}</span>`;
+      el.appendChild(head);
+
+      const prompt = document.createElement("div");
+      prompt.className = "prompt";
+      prompt.innerHTML = step.prompt;
+      el.appendChild(prompt);
+
+      if (step.diagram) {
+        const dia = document.createElement("div");
+        dia.className = "diagram";
+        dia.innerHTML = step.diagram;
+        el.appendChild(dia);
+      }
+
+      const revealZone = document.createElement("div");
+
+      function doReveal() {
+        revealZone.appendChild(makeReveal("solution", "Work it through", step.reveal));
+        const discovered = document.createElement("div");
+        discovered.className = "discovered";
+        const dlab = document.createElement("div");
+        dlab.className = "discovered-label";
+        dlab.textContent = "What you discovered";
+        const dtext = document.createElement("div");
+        dtext.className = "discovered-text";
+        dtext.textContent = step.discovered;
+        discovered.appendChild(dlab);
+        discovered.appendChild(dtext);
+        revealZone.appendChild(discovered);
+      }
+
+      if (mode === "revealed") {
+        doReveal();
+        el.appendChild(revealZone);
+      } else {
+        const actions = document.createElement("div");
+        actions.className = "actions";
+
+        if (step.hint) {
+          let hintShown = false;
+          const hintBtn = document.createElement("button");
+          hintBtn.className = "btn";
+          hintBtn.textContent = "Show a hint";
+          hintBtn.addEventListener("click", () => {
+            if (hintShown) return;
+            hintShown = true;
+            hintBtn.disabled = true;
+            revealZone.appendChild(makeReveal("hint", "Hint", escapeToHtml(step.hint)));
+          });
+          actions.appendChild(hintBtn);
+        }
+
+        const revealBtn = document.createElement("button");
+        revealBtn.className = "btn primary";
+        revealBtn.textContent = "Work it through";
+        revealBtn.addEventListener("click", () => {
+          revealBtn.disabled = true;
+          doReveal();
+          if (i + 1 > revealed) {
+            revealed = i + 1;
+            setTrackProgress(track, revealed, revealed >= track.steps.length);
+          }
+          // advance
+          if (i + 1 < track.steps.length) {
+            const next = renderStep(i + 1, "active");
+            stepsWrap.appendChild(next);
+            refreshDots(i + 1);
+            next.scrollIntoView({ behavior: "smooth", block: "start" });
+          } else {
+            showSynthesis();
+            synthWrap.scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+        });
+        actions.appendChild(revealBtn);
+        el.appendChild(revealZone);
+        el.appendChild(actions);
+      }
+      return el;
+    }
+
+    // Build initial state based on saved progress.
+    const startActive = Math.min(revealed, track.steps.length - 1);
+    for (let i = 0; i < startActive; i++) {
+      stepsWrap.appendChild(renderStep(i, "revealed"));
+    }
+    if (revealed >= track.steps.length) {
+      // fully done: show all revealed + synthesis
+      stepsWrap.appendChild(renderStep(track.steps.length - 1, "revealed"));
+      refreshDots(-1);
+      showSynthesis();
+    } else {
+      stepsWrap.appendChild(renderStep(startActive, "active"));
+      refreshDots(startActive);
+    }
+  }
+
+  /* ================= VIEW SWITCHING ================= */
+
+  function switchView(view) {
+    const puzzles = view === "puzzles";
+    puzzlesView.hidden = !puzzles;
+    tracksView.hidden = puzzles;
+    introPuzzles.hidden = !puzzles;
+    introTracks.hidden = puzzles;
+    viewTabs.querySelectorAll(".view-tab").forEach((t) => {
+      t.classList.toggle("active", t.dataset.view === view);
+    });
+    if (!puzzles) renderTrackList();
+  }
+
+  viewTabs.addEventListener("click", (e) => {
+    const btn = e.target.closest(".view-tab");
+    if (btn) switchView(btn.dataset.view);
+  });
+
   resetBtn.addEventListener("click", () => {
-    if (!confirm("Clear all saved progress?")) return;
-    state = { solved: {} };
+    if (!confirm("Clear all saved progress (puzzles and tracks)?")) return;
+    state = { solved: {}, tracks: {} };
     saveState();
     updateProgressBadge();
     renderProblems();
   });
 
-  // Init
+  /* ---------- init ---------- */
   renderFilters();
   renderProblems();
   updateProgressBadge();
+  switchView("puzzles");
 })();

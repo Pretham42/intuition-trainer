@@ -33,21 +33,37 @@
 
   <main class="wrap">
     <section class="intro">
-      <p>
-        Each problem gives you the puzzle, up to three escalating hints, and a full solution.
-        The part that actually builds intuition comes last: <strong>the question you could have
-        asked yourself</strong> to reach the answer on your own. Read that, and next time you'll
-        ask it before you need the hint.
+      <p id="introPuzzles">
+        <strong>Puzzles:</strong> each gives you the problem, up to three escalating hints, and a
+        full solution. The part that actually builds intuition comes last: <strong>the question you
+        could have asked yourself</strong> to reach the answer on your own. Read that, and next time
+        you'll ask it before you need the hint.
       </p>
+      <p id="introTracks" hidden>
+        <strong>Discovery Tracks:</strong> guided sequences that lead you to <em>rediscover</em> a
+        core idea yourself — one question at a time, deriving each piece before it's revealed. You
+        don't get handed the formula; you rebuild it, then see that what you built <em>is</em> the
+        concept.
+      </p>
+      <div class="view-tabs" id="viewTabs">
+        <button class="view-tab active" data-view="puzzles">Puzzles</button>
+        <button class="view-tab" data-view="tracks">Discovery Tracks</button>
+      </div>
+    </section>
+
+    <section id="puzzlesView">
       <div class="controls">
         <div class="filters" id="categoryFilters"></div>
         <button class="btn ghost" id="resetProgress" title="Clear your saved progress">Reset progress</button>
       </div>
+      <section id="problemList" class="problem-list"></section>
+      <p class="empty-note" id="emptyNote" hidden>No problems in this category yet.</p>
     </section>
 
-    <section id="problemList" class="problem-list"></section>
-
-    <p class="empty-note" id="emptyNote" hidden>No problems in this category yet.</p>
+    <section id="tracksView" hidden>
+      <div id="trackList" class="track-list"></div>
+      <div id="trackDetail" hidden></div>
+    </section>
   </main>
 
   <footer class="site-footer">
@@ -57,6 +73,7 @@
   </footer>
 
   <script src="problems.js"></script>
+  <script src="tracks.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
