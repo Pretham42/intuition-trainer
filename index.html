@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Intuition Trainer — Think Like a Problem Solver</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="bg-grid" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" width="28" height="28">
+            <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
+            <path d="M16 6 v20 M6 16 h20" stroke="currentColor" stroke-width="1.2" opacity="0.35"/>
+            <circle cx="16" cy="16" r="4" fill="currentColor"/>
+          </svg>
+        </div>
+        <div>
+          <h1>Intuition Trainer</h1>
+          <p class="tagline">Don't memorize answers. Train the questions that find them.</p>
+        </div>
+      </div>
+      <div class="progress-badge" id="progressBadge" title="Problems solved">
+        <span id="solvedCount">0</span> / <span id="totalCount">0</span> solved
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="intro">
+      <p>
+        Each problem gives you the puzzle, up to three escalating hints, and a full solution.
+        The part that actually builds intuition comes last: <strong>the question you could have
+        asked yourself</strong> to reach the answer on your own. Read that, and next time you'll
+        ask it before you need the hint.
+      </p>
+      <div class="controls">
+        <div class="filters" id="categoryFilters"></div>
+        <button class="btn ghost" id="resetProgress" title="Clear your saved progress">Reset progress</button>
+      </div>
+    </section>
+
+    <section id="problemList" class="problem-list"></section>
+
+    <p class="empty-note" id="emptyNote" hidden>No problems in this category yet.</p>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>Built to train intuition, not recall. Add your own problems in <code>problems.js</code>.</p>
+    </div>
+  </footer>
+
+  <script src="problems.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
