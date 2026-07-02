@@ -9,8 +9,8 @@ It has two modes:
 - **Discovery Tracks** — guided sequences that lead you to *rediscover* a core concept
   yourself, one question at a time. You derive each piece before it's revealed, each step
   names **what you just discovered**, and a synthesis at the end shows you that what you
-  built *is* the concept. Current tracks: Rediscovering Backpropagation, Rediscovering
-  Loss Functions, and Rediscovering Dynamic Programming.
+  built *is* the concept. Current tracks: Rediscovering Backpropagation, Loss Functions,
+  Attention, Gradient Descent & the Learning Rate, Dynamic Programming, and Big-O.
 
 Problems span the areas that matter for AI / CS / computational-biology interviews:
 algorithms & data structures, probability, ML/AI conceptual reasoning, quantitative

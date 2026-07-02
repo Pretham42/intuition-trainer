@@ -190,5 +190,192 @@ const TRACKS = [
     synthesis: `<p>You rebuilt dynamic programming from the ground up: write the honest recursion, notice it recomputes the same subproblems, cache them (<strong>memoization</strong>), and optionally rebuild bottom-up (<strong>tabulation</strong>) to save space. The trigger for reaching for DP is simply spotting <strong>overlapping subproblems + optimal substructure</strong>.</p>
       <p>Because you derived it from the waste it removes, you can now invent a DP solution to a new problem instead of trying to recall one.</p>`,
     connects: `<p>The reuse-of-subresults idea here is the same one that makes <strong>backpropagation</strong> efficient (caching the error signal δ). Related puzzles: <code>Aligning two DNA sequences</code>, <code>Sample from a stream you can't store</code>.</p>`
+  },
+
+  {
+    id: "attention",
+    title: "Rediscovering Attention",
+    category: "ML / AI",
+    difficulty: "Core",
+    blurb: "Build the mechanism at the heart of every transformer — from 'which words should I look at?' to scaled dot-product multi-head attention.",
+    intro: `<p>You'll rebuild self-attention from one simple need: when a model processes a word, it should pull in information from other <em>relevant</em> words. Each step you'll derive a piece — queries, keys, values, the dot-product score, the softmax, the √d scaling, multiple heads — as the answer to a concrete problem. Nothing will be arbitrary.</p>`,
+    steps: [
+      {
+        title: "Why context has to flow between words",
+        prompt: `<p>Consider the sentence: "the animal didn't cross the street because <em>it</em> was too tired." To represent the word "it", the model must know it refers to "animal", not "street" — and that depends on the whole sentence. A fixed embedding of "it" can't capture that. So a word's representation should be a blend of <em>other</em> words' information, weighted by relevance. If you had a relevance weight <code>w(i,j)</code> between word <code>i</code> and word <code>j</code>, how would you form the new representation of word <code>i</code>?</p>`,
+        hint: "Combine the other words' vectors in proportion to how relevant each is.",
+        reveal: `<p>Make it a <strong>weighted sum</strong> of the other words' vectors: <code>new_i = Σⱼ w(i,j) · vⱼ</code>, with the weights summing to 1. The entire mechanism reduces to two questions: how do we compute good weights <code>w(i,j)</code>, and which vectors <code>vⱼ</code> do we combine? Everything else is detail.</p>`,
+        discovered: "A contextual representation is just a weighted average of other tokens' information. Attention is the question 'which tokens should I average in, and how much?'"
+      },
+      {
+        title: "Scoring relevance",
+        prompt: `<p>You need a number saying how relevant word <code>j</code> is to word <code>i</code>. Each word has an embedding vector. What's a simple, differentiable way to score how compatible two vectors are — large when they point in similar directions — and cheap to compute for <em>all</em> pairs at once?</p>`,
+        hint: "A single operation on two vectors gives a large value when they align. And all pairs at once is one matrix product.",
+        reveal: `<p>The <strong>dot product</strong>: <code>score(i,j) = xᵢ · xⱼ</code>. It's large when the vectors align, near zero when orthogonal, and you can compute every pair simultaneously as the matrix product <code>X Xᵀ</code>. That's your raw similarity matrix.</p>`,
+        discovered: "The dot product is a natural, cheap similarity score, and computing it for all token pairs is a single matrix multiply."
+      },
+      {
+        title: "Two roles: queries and keys",
+        prompt: `<p>Using <code>xᵢ · xⱼ</code> directly has two flaws: it forces relevance to be symmetric (i-to-j equals j-to-i), and it uses the <em>same</em> vector for "what I'm looking for" and "what I offer." But "it" <em>seeking</em> its referent is a different role than "animal" <em>being available</em> as one. How can each word play two distinct roles, and how does that make relevance directional?</p>`,
+        hint: "Project each embedding into two different learned spaces — one for seeking, one for offering.",
+        reveal: `<p>Give each word two learned projections: a <strong>query</strong> <code>qᵢ = W_Q xᵢ</code> (what word <code>i</code> is looking for) and a <strong>key</strong> <code>kⱼ = W_K xⱼ</code> (what word <code>j</code> offers). The score becomes <code>qᵢ · kⱼ</code> — now asymmetric and role-specific, and the model <em>learns</em> <code>W_Q</code> and <code>W_K</code> to decide what to look for.</p>`,
+        discovered: "Separating the 'query' (what I seek) from the 'key' (what I offer), via learned projections, makes attention directional and lets the model learn what matters."
+      },
+      {
+        title: "What actually gets passed: values",
+        prompt: `<p>Once word <code>i</code> decides word <code>j</code> is relevant, what information from <code>j</code> should it actually mix in? Should it reuse the key vector it matched against, or something separate?</p>`,
+        hint: "Matching and content-to-deliver are different jobs — give them different projections.",
+        reveal: `<p>Use a third learned projection, the <strong>value</strong> <code>vⱼ = W_V xⱼ</code>. What you match on (keys) and what you retrieve (values) are distinct jobs, so they get separate projections. The output is <code>outputᵢ = Σⱼ softmax_j(qᵢ · kⱼ) · vⱼ</code> — you now have the full Q, K, V trio.</p>`,
+        discovered: "The content you retrieve (value) is decoupled from the content you match on (key). Three projections — Q, K, V — each serve a distinct role."
+      },
+      {
+        title: "Normalizing the weights (and the √d trick)",
+        prompt: `<p>The scores <code>qᵢ · kⱼ</code> are arbitrary real numbers, but weights for a weighted average must be non-negative and sum to 1. What function turns arbitrary scores into such weights? And a subtlety: if the query/key vectors have dimension <code>d</code>, the dot product's typical magnitude grows with <code>d</code>, pushing that function into saturation (tiny gradients). What simple rescaling fixes it?</p>`,
+        hint: "Softmax makes a probability distribution. For the scale: what's the standard deviation of a dot product of two ~unit-variance vectors of dimension d?",
+        reveal: `<p>Apply <strong>softmax</strong> over <code>j</code> to turn the scores into a proper weight distribution. To control scale, divide the scores by <code>√d</code> before the softmax: <code>Attention = softmax(QKᵀ / √d) · V</code>. Why <code>√d</code>: if the entries of <code>q</code> and <code>k</code> are roughly independent with unit variance, then <code>q · k</code> is a sum of <code>d</code> such products and has variance <code>~d</code>, so its standard deviation is <code>~√d</code>. Dividing by <code>√d</code> renormalizes the scores to variance <code>~1</code>, keeping softmax in a sensitive, non-saturated range with healthy gradients.</p>`,
+        discovered: "Softmax converts scores into a differentiable probability distribution (the weights); dividing by √d stops the dot products from growing with dimension and stalling gradients. That's scaled dot-product attention."
+      },
+      {
+        title: "Many relationships at once: multiple heads",
+        prompt: `<p>A single set of Q/K/V lets each word attend one way. But "it" might need to track its referent, <em>and</em> the grammatical subject, <em>and</em> more, simultaneously. How can the model attend to several different kinds of relationships at once — without just building one giant attention?</p>`,
+        hint: "Run several smaller attentions in parallel and combine their outputs.",
+        reveal: `<p>Use <strong>multiple heads</strong>: run several attention operations in parallel, each with its own smaller <code>W_Q, W_K, W_V</code>, then concatenate their outputs and pass them through a final projection. Each head can specialize — one might track coreference, another positional patterns, another syntax — and concatenation fuses these perspectives. This is multi-head attention.</p>`,
+        discovered: "Multiple parallel heads let the model attend to several types of relationships at once; concatenating their outputs combines those perspectives into one representation."
+      }
+    ],
+    synthesis: `<p>You built self-attention from scratch. A contextual representation is a weighted average of other tokens' <strong>values</strong>; the weights come from <strong>query · key</strong> similarity, normalized by <strong>softmax</strong> and scaled by <strong>√d</strong>; and multiple <strong>heads</strong> capture multiple relationship types in parallel. Stack this with feed-forward layers, residual connections, and normalization, and you have a transformer block.</p>
+      <p>Every design choice answered a concrete need — no magic. And notice: attention connects <em>any</em> two positions with a direct path, which (as the RNN puzzle showed) is exactly why transformers train and scale where recurrent networks struggle.</p>`,
+    connects: `<p>Related puzzles: <code>Why attention uses a softmax</code>, <code>Why RNNs forget, and how attention fixes it</code>, <code>Why residual connections work</code>. And the <strong>Rediscovering Backpropagation</strong> track shows how all these learned projections actually get trained.</p>`
+  },
+
+  {
+    id: "gradient-descent",
+    title: "Rediscovering Gradient Descent & the Learning Rate",
+    category: "ML / AI",
+    difficulty: "Core",
+    blurb: "Derive how models actually learn — from 'which way is downhill?' to why the step size makes or breaks training.",
+    intro: `<p>You have a loss to minimize and millions of parameters — you can't try all values. You'll derive gradient descent from a single question, "which way should I nudge the parameters to reduce the loss?", and then discover why the <em>step size</em> (the learning rate) is the knob everything hinges on. A little algebra in the middle will make the mysterious behaviors (overshoot, divergence, zig-zagging) completely predictable.</p>`,
+    steps: [
+      {
+        title: "Which way is downhill?",
+        prompt: `<p>Your loss <code>L(w)</code> depends on one weight <code>w</code>, and you're standing at some value <code>w₀</code>. You can compute <code>L</code> and its derivative there, but you can't see the whole curve. Which direction should you move <code>w</code> to <em>decrease</em> <code>L</code>, and how do you know from the derivative alone?</p>`,
+        hint: "The derivative's sign tells you which way L is increasing.",
+        reveal: `<p>Move <em>opposite</em> the sign of the derivative. If <code>dL/dw > 0</code>, the loss rises as <code>w</code> increases, so decrease <code>w</code>; if <code>dL/dw < 0</code>, increase it. The derivative points uphill, so step the other way: <code>w ← w − (step)·(dL/dw)</code>.</p>`,
+        discovered: "The derivative points toward steepest increase; to descend, step in the negative-gradient direction. That is the core of gradient descent."
+      },
+      {
+        title: "Downhill in a million dimensions",
+        prompt: `<p>Now <code>L</code> depends on millions of weights at once. For each weight there's a direction that reduces <code>L</code>. What single object captures "the steepest downhill direction" across all of them simultaneously, and how do you update everything at once?</p>`,
+        hint: "Collect all the partial derivatives into one vector.",
+        reveal: `<p>The <strong>gradient</strong> <code>∇L</code> — the vector of all partial derivatives <code>∂L/∂wₖ</code> — points in the direction of steepest ascent in the full parameter space. Descend by subtracting it from every parameter at once: <code>w ← w − η ∇L</code>. (And how do you get <code>∇L</code> efficiently for a neural net? Exactly the backpropagation you rebuilt in the other track.)</p>`,
+        discovered: "In high dimensions the gradient vector is the steepest-ascent direction; descend by subtracting it from all parameters together. Backprop is how that gradient is computed."
+      },
+      {
+        title: "How big a step? Meet η",
+        prompt: `<p>The gradient gives a <em>direction</em>, not a distance. You scale it by a step size <code>η</code> (the learning rate): <code>w ← w − η ∇L</code>. Reason about the two extremes: <code>η</code> extremely small, and <code>η</code> extremely large. What goes wrong at each end?</p>`,
+        hint: "One extreme barely moves; the other flies past the target.",
+        reveal: `<p><strong>η too small:</strong> you inch downhill, needing an impractical number of steps to get anywhere. <strong>η too large:</strong> you overshoot the minimum and land higher up the opposite wall; steps can grow instead of shrink, and the loss diverges to infinity or NaN. Somewhere between is a sweet spot.</p>`,
+        discovered: "The learning rate turns the gradient direction into an actual step. Too small crawls; too large overshoots and can diverge. Training is extremely sensitive to it."
+      },
+      {
+        title: "Picture the bowl — why overshoot happens",
+        prompt: `<p>Model the loss near a minimum as a simple bowl: <code>L = ½ a w²</code> (with curvature <code>a > 0</code>). Then <code>dL/dw = a w</code>, so one gradient-descent step gives <code>w ← w − η·a·w = (1 − ηa)·w</code>. For the sequence of <code>w</code> values to shrink toward 0 (converge), what must be true of <code>(1 − ηa)</code>? Trace what happens as <code>ηa</code> passes 1, then 2.</p>`,
+        diagram: `<svg viewBox="0 0 460 190" xmlns="http://www.w3.org/2000/svg" font-family="monospace" font-size="11">
+          <path d="M40 160 Q 230 -10 420 160" fill="none" stroke="#24314a" stroke-width="1.5"/>
+          <line x1="230" y1="20" x2="230" y2="170" stroke="#1c2740" stroke-dasharray="3 3"/>
+          <text x="230" y="184" fill="#9fb0c9" text-anchor="middle">minimum</text>
+          <g fill="#7ef0c0"><circle cx="120" cy="120" r="4"/><circle cx="180" cy="72" r="4"/><circle cx="215" cy="38" r="4"/></g>
+          <text x="95" y="112" fill="#7ef0c0">stable: 0&lt;ηa&lt;1</text>
+          <g fill="#ff8f8f"><circle cx="110" cy="128" r="4"/><circle cx="350" cy="128" r="4"/><circle cx="70" cy="150" r="4"/></g>
+          <text x="300" y="150" fill="#ff8f8f">ηa&gt;2: diverges</text>
+        </svg>`,
+        hint: "Each step multiplies w by the same factor (1 − ηa). When does repeated multiplication shrink toward zero?",
+        reveal: `<p>Each step multiplies <code>w</code> by the constant factor <code>(1 − ηa)</code>, so convergence needs <code>|1 − ηa| < 1</code>, i.e. <code>0 < η < 2/a</code>. Within that: for <code>0 < ηa < 1</code> the factor is positive and <code>w</code> shrinks smoothly; for <code>1 < ηa < 2</code> the factor is negative, so <code>w</code> flips sign each step but still shrinks (damped oscillation); at <code>ηa = 2</code> it bounces forever; and for <code>ηa > 2</code> the factor exceeds 1 in magnitude and <code>w</code> <em>grows</em> — divergence.</p>`,
+        discovered: "Stability requires η < 2/curvature. Overshoot and divergence aren't mysterious — they're exactly what happens when the step exceeds what the curvature allows. The right η depends on the shape of the loss."
+      },
+      {
+        title: "When one η can't fit every direction",
+        prompt: `<p>Real losses curve sharply in some directions and gently in others — an elongated valley. A single <code>η</code> must obey <code>η < 2/a</code> for the <em>sharpest</em> direction, but that same <code>η</code> is then tiny relative to the gentle directions. What's the visible symptom, and what kinds of fixes address it?</p>`,
+        hint: "Think about progress along the flat direction versus the steep one, and what could give each direction its own effective step.",
+        reveal: `<p><strong>Symptom:</strong> the sharp direction caps <code>η</code>, so progress along the gentle, low-curvature direction is painfully slow — you zig-zag down a narrow valley. <strong>Fixes:</strong> <em>momentum</em> (accumulate a velocity that powers through gentle directions and damps oscillation in sharp ones); <em>adaptive per-parameter rates</em> (AdaGrad / RMSProp / Adam) that scale each direction's step by its own gradient history; and <em>normalization</em> to make the loss surface more evenly curved.</p>`,
+        discovered: "A single global step size can't be optimal when curvature differs by direction. Momentum and adaptive optimizers like Adam effectively give each direction its own learning rate."
+      },
+      {
+        title: "The practical recipe",
+        prompt: `<p>Putting it together: how do you actually <em>choose</em> <code>η</code> in practice, and why do people "warm up" the learning rate at the start and "decay" it toward the end?</p>`,
+        hint: "You derived a stability ceiling; pick just under it. And think about big steps early vs. careful steps near the bottom.",
+        reveal: `<p><strong>Choosing η:</strong> sweep it on a log scale (<code>1e-1, 1e-2, 1e-3, …</code>), watch the loss curve, and take the <em>largest</em> value that still decreases smoothly and stably — largest means fastest without diverging, i.e. just under the stability ceiling you derived. <strong>Warmup</strong> (start small, ramp up) avoids early blow-ups when weights and gradients are wild. <strong>Decay</strong> (shrink <code>η</code> over training) lets you take big steps early and small, careful steps near the minimum — because near the bottom a large step overshoots, exactly as the bowl analysis predicts.</p>`,
+        discovered: "Pick the largest stable η by scanning a log scale; warm up to avoid early instability and decay to settle into the minimum. The whole schedule follows from the stability picture you derived."
+      }
+    ],
+    synthesis: `<p>You rebuilt gradient descent from "which way is downhill?" (the negative gradient) and discovered the learning rate is the step size that turns direction into motion — with a hard stability limit <code>η < 2/curvature</code>. Overshoot, divergence, slow crawling, zig-zagging valleys, and the reasons behind momentum, Adam, warmup, and decay all fall out of that one small bowl calculation.</p>
+      <p>The gradient itself comes from <strong>backpropagation</strong>; <em>what</em> you're minimizing comes from your <strong>loss function</strong>. Three tracks, one training loop.</p>`,
+    connects: `<p>Pairs with the <strong>Rediscovering Backpropagation</strong> track (computing <code>∇L</code>) and <strong>Rediscovering Loss Functions</strong> (what <code>L</code> is). Related puzzles: <code>Choosing a learning rate</code>, <code>Why residual connections work</code>.</p>`
+  },
+
+  {
+    id: "big-o",
+    title: "Rediscovering Big-O",
+    category: "Algorithms",
+    difficulty: "Core",
+    blurb: "Build algorithmic complexity from 'how does the work grow as the input grows?' — the language for reasoning about scale.",
+    intro: `<p>Big-O is how we talk about whether an algorithm will still work when the input gets large. You'll rediscover it by timing algorithms in your head — counting operations as the input grows — and then throwing away everything that doesn't matter at scale, until what's left is exactly the notation.</p>`,
+    steps: [
+      {
+        title: "Count operations, not seconds",
+        prompt: `<p>You want to compare two algorithms fairly. Timing them with a stopwatch depends on the machine, the language, and what else the CPU is doing. What machine-independent quantity should you count instead — and as a function of what?</p>`,
+        hint: "Count the fundamental work, and express it in terms of how big the input is.",
+        reveal: `<p>Count the number of <strong>basic operations</strong> as a function of the <strong>input size <code>n</code></strong>. This is machine-independent and predicts how the algorithm scales. Summing an array of <code>n</code> numbers, for instance, does about <code>n</code> additions — regardless of the computer.</p>`,
+        discovered: "Analyze cost as a count of basic operations versus input size n, not wall-clock time. That abstracts away the machine and exposes how the work scales."
+      },
+      {
+        title: "Only the growth rate survives",
+        prompt: `<p>Algorithm A does <code>100n + 5</code> operations; algorithm B does <code>2n²</code>. At <code>n = 1</code>, A does 105 and B does 2 — A looks worse! Which do you prefer for <em>large</em> <code>n</code>, and why do the constant <code>100</code> and the <code>+5</code> stop mattering?</p>`,
+        hint: "Compute both at n = 1000 and see which term runs away.",
+        reveal: `<p>Prefer A for large <code>n</code>. At <code>n = 1000</code>: A ≈ 100,000 but B = 2,000,000, and the gap only widens — B's <code>n²</code> term outgrows any linear term no matter the constants. As <code>n → ∞</code> the highest-order term dominates and constants and lower-order terms become negligible. So we keep only the dominant term and drop constants: A is <code>O(n)</code>, B is <code>O(n²)</code>.</p>`,
+        discovered: "At scale, only the fastest-growing term matters; constant factors and lower-order terms wash out. Big-O keeps just the dominant growth term."
+      },
+      {
+        title: "Pin down the definition",
+        prompt: `<p>Let's formalize "grows no faster than." We say <code>f(n)</code> is <code>O(g(n))</code> if, beyond some point, <code>f</code> is at most a constant multiple of <code>g</code>. Why do we need both the "constant multiple" part and the "beyond some point" part?</p>`,
+        hint: "One clause lets you ignore machine constants; the other lets you ignore small-n quirks.",
+        reveal: `<p><code>f(n) = O(g(n))</code> means there exist constants <code>c > 0</code> and <code>n₀</code> such that <code>f(n) ≤ c·g(n)</code> for all <code>n ≥ n₀</code>. The <strong>constant multiple <code>c</code></strong> lets us ignore machine-dependent factors (a 2× faster CPU shouldn't change the class); the <strong>threshold <code>n₀</code></strong> lets us ignore small-<code>n</code> quirks and focus on asymptotic behavior. It's an upper bound on growth rate.</p>`,
+        discovered: "O(g(n)) means 'eventually bounded above by a constant times g(n)' — an asymptotic upper bound that deliberately ignores constants and small inputs."
+      },
+      {
+        title: "Read it straight off the loops",
+        prompt: `<p>Estimate the Big-O of each without formal math: (a) a single loop over <code>n</code> items; (b) a loop over <code>n</code> nested inside another loop over <code>n</code>; (c) a process that halves the remaining problem each step until one item is left.</p>`,
+        diagram: `<svg viewBox="0 0 460 200" xmlns="http://www.w3.org/2000/svg" font-family="monospace" font-size="11">
+          <line x1="45" y1="175" x2="440" y2="175" stroke="#24314a"/>
+          <line x1="45" y1="15" x2="45" y2="175" stroke="#24314a"/>
+          <text x="240" y="193" fill="#6c7d99" text-anchor="middle">input size n →</text>
+          <path d="M45 168 Q 240 150 435 130" fill="none" stroke="#7ef0c0" stroke-width="2"/>
+          <text x="410" y="122" fill="#7ef0c0">O(log n)</text>
+          <path d="M45 172 L 435 60" fill="none" stroke="#6ea8fe" stroke-width="2"/>
+          <text x="412" y="54" fill="#6ea8fe">O(n)</text>
+          <path d="M45 174 Q 330 172 420 20" fill="none" stroke="#ff8f8f" stroke-width="2"/>
+          <text x="380" y="28" fill="#ff8f8f">O(n²)</text>
+        </svg>`,
+        hint: "Sequential work adds; nested loops multiply; repeated halving is a logarithm.",
+        reveal: `<p>(a) <code>O(n)</code> — <code>n</code> iterations. (b) <code>O(n²)</code> — <code>n</code> iterations times <code>n</code>. (c) <code>O(log n)</code> — halving <code>n</code> repeatedly takes about <code>log₂ n</code> steps to reach 1 (this is binary search, and the same information-halving intuition behind the coin-weighing puzzles). The rule of thumb: nested loops multiply, and repeatedly dividing the problem gives logarithms.</p>`,
+        discovered: "You can usually read Big-O off the structure: sequential work adds, nested loops multiply, and repeatedly halving the problem gives log n."
+      },
+      {
+        title: "Why the class beats the code",
+        prompt: `<p>One engineer cleverly shaves 50% off the constant of an <code>O(n²)</code> algorithm; another lazily swaps in an <code>O(n log n)</code> algorithm with no tuning. At <code>n = 1,000,000</code>, who wins, and roughly by how much?</p>`,
+        hint: "Plug in n = 10⁶: compare n², halved n², and n·log n.",
+        reveal: `<p>The <code>O(n log n)</code> algorithm wins overwhelmingly. At <code>n = 10⁶</code>: <code>n² = 10¹²</code>, while <code>n·log₂ n ≈ 10⁶ × 20 = 2×10⁷</code> — about <strong>50,000× fewer operations</strong>. Halving the constant of the <code>n²</code> version still leaves <code>5×10¹¹</code>, utterly dwarfed. Moving to a lower complexity class beats any constant-factor tuning at scale.</p>`,
+        discovered: "Improving the complexity class dominates constant-factor optimization for large inputs. That's why 'what's the Big-O?' is the first question, not 'how fast is the code?'"
+      },
+      {
+        title: "Know the limits of the model",
+        prompt: `<p>Two cautions before you trust Big-O blindly. (a) It's usually the <em>worst</em> case unless stated otherwise — how can the same algorithm have different bounds? (b) It hides constants — so is an <code>O(n)</code> algorithm <em>always</em> better in practice than an <code>O(n log n)</code> one?</p>`,
+        hint: "Think quicksort's average vs worst case; and think about small n and cache effects.",
+        reveal: `<p>(a) Always state the case: quicksort is <code>O(n log n)</code> on average but <code>O(n²)</code> in the worst case — same algorithm, different bounds for best/average/worst inputs. (b) Not always: because Big-O drops constants and lower-order terms, for small or moderate <code>n</code> a low-constant <code>O(n log n)</code> algorithm can beat a high-constant <code>O(n)</code> one, and real-world factors like cache behavior and memory can dominate. Big-O predicts <em>scaling</em>, not absolute speed — choose the class with it, then measure to tune.</p>`,
+        discovered: "Big-O is an asymptotic, usually worst-case, constant-free model. It's the right tool for reasoning about scale, but you still measure real inputs for constants, cache effects, and small-n behavior."
+      }
+    ],
+    synthesis: `<p>You rebuilt Big-O from the ground up: count operations versus input size, keep only the dominant term, formalize it as "eventually <code>≤ c·g(n)</code>", read it straight off loops, and land on the punchline that complexity <em>class</em> beats constant-factor tuning at scale. It's the vocabulary for predicting whether something survives as <code>n</code> grows large — the first question to ask about any algorithm — while remembering it deliberately ignores constants, so you still measure real inputs.</p>`,
+    connects: `<p>Related puzzles: <code>Why comparison sorting can't beat n log n</code> (a Big-O lower bound), <code>Twelve coins, one fake, three weighings</code> and <code>Trailing zeros of 100!</code> (logarithms and bottlenecks), and the <strong>Rediscovering Dynamic Programming</strong> track (turning exponential into polynomial).</p>`
   }
 ];
