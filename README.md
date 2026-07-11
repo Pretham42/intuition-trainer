@@ -6,11 +6,14 @@ It has two modes:
 - **Puzzles** — each gives you the problem, up to three escalating hints, and a full
   solution, then the key feature: **the question you could have asked yourself** to reach
   the answer, plus the transferable lesson behind it. 58 problems and counting.
-- **Discovery Tracks** — guided sequences that lead you to *rediscover* a core concept
-  yourself, one question at a time. You derive each piece before it's revealed, each step
-  names **what you just discovered**, and a synthesis at the end shows you that what you
-  built *is* the concept. Current tracks: Rediscovering Backpropagation, Loss Functions,
-  Attention, Gradient Descent & the Learning Rate, Dynamic Programming, and Big-O.
+- **Discovery Tracks** — guided lessons that lead you to *rediscover* a core concept
+  yourself. Each follows a **lecture + problem-solving** rhythm (see [`FRAMEWORK.md`](FRAMEWORK.md)):
+  every step opens with a short *Concept* brief (the tool you need), then a *Your turn*
+  challenge you work out, escalating hints, a full work-through, and a one-line **insight**.
+  Each track carries an *overview* (goal, prerequisites, objectives, time) and ends with
+  *checkpoints* (active-recall self-tests). Current tracks: Rediscovering Backpropagation,
+  Loss Functions, Gradient Descent & the Learning Rate, Attention, Molecular Dynamics,
+  Dynamic Programming, and Big-O.
 
 Problems span the areas that matter for AI / CS / computational-biology interviews:
 algorithms & data structures, probability, ML/AI conceptual reasoning, quantitative
