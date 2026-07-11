@@ -395,7 +395,97 @@ body {
   background: rgba(110, 168, 254, 0.12); padding: 1px 6px; border-radius: 5px; color: #cde1ff;
 }
 
+/* Track overview */
+.track-overview {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 14px;
+}
+.ov-row { display: flex; gap: 10px; align-items: baseline; }
+.ov-label {
+  flex-shrink: 0;
+  min-width: 118px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.ov-val { color: var(--text-dim); }
+.ov-obj { display: flex; gap: 10px; }
+.ov-obj ul { margin: 0; padding-left: 18px; color: var(--text-dim); }
+.ov-obj li { margin: 2px 0; }
+
+/* Step brief (the "lecture" block) */
+.step-brief {
+  margin-bottom: 14px;
+  border: 1px solid var(--border-soft);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  background: rgba(110, 168, 254, 0.06);
+  overflow: hidden;
+}
+.brief-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding: 8px 14px 0;
+}
+.brief-body { padding: 4px 14px 12px; font-size: 14.5px; color: var(--text-dim); }
+.brief-body p { margin: 0 0 8px; }
+.brief-body p:last-child { margin-bottom: 0; }
+.brief-body strong { color: var(--text); }
+.brief-body code {
+  font-family: var(--mono); font-size: 0.9em;
+  background: rgba(110, 168, 254, 0.14); padding: 1px 6px; border-radius: 5px; color: #cde1ff;
+}
+
+.challenge-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent-warm);
+  margin-bottom: 8px;
+}
+
+/* Checkpoints ("check yourself") */
+.checkpoints {
+  margin-top: 22px;
+  border: 1px solid var(--accent-warm);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  animation: slideIn 0.3s ease;
+}
+.checkpoints-badge {
+  font-size: 12.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 11px 18px; color: var(--bg); background: var(--accent-warm);
+}
+.checkpoints-body { padding: 6px 18px 18px; }
+.checkpoint { padding: 14px 0; border-bottom: 1px solid var(--border-soft); }
+.checkpoint:last-child { border-bottom: none; }
+.check-q { font-size: 15px; color: var(--text); margin-bottom: 10px; }
+.check-q code, .check-a code {
+  font-family: var(--mono); font-size: 0.9em;
+  background: rgba(110, 168, 254, 0.12); padding: 1px 6px; border-radius: 5px; color: #cde1ff;
+}
+.check-a {
+  margin-top: 10px; padding: 12px 14px; font-size: 14.5px; color: var(--text-dim);
+  background: var(--bg); border: 1px solid var(--border-soft); border-radius: 8px;
+}
+.check-a p { margin: 0 0 8px; }
+.check-a p:last-child { margin-bottom: 0; }
+
 @media (max-width: 560px) {
   .header-inner { flex-direction: column; align-items: flex-start; }
   .card-head { flex-direction: column; }
+  .ov-row { flex-direction: column; gap: 2px; }
+  .ov-label { min-width: 0; }
 }

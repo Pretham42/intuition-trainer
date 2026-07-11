@@ -322,13 +322,24 @@
     // Header card
     const header = document.createElement("div");
     header.className = "track-header";
+    const ov = track.overview;
+    const overviewHtml = ov
+      ? `<div class="track-overview">
+           ${ov.goal ? `<div class="ov-row"><span class="ov-label">Goal</span><span class="ov-val">${ov.goal}</span></div>` : ""}
+           ${ov.prerequisites ? `<div class="ov-row"><span class="ov-label">Prereqs</span><span class="ov-val">${ov.prerequisites}</span></div>` : ""}
+           ${ov.time ? `<div class="ov-row"><span class="ov-label">Time</span><span class="ov-val">${escapeText(ov.time)}</span></div>` : ""}
+           ${ov.objectives && ov.objectives.length
+             ? `<div class="ov-obj"><span class="ov-label">By the end you can</span><ul>${ov.objectives.map((o) => `<li>${o}</li>`).join("")}</ul></div>`
+             : ""}
+         </div>`
+      : "";
     header.innerHTML =
       `<h2>${escapeText(track.title)}</h2>
        <div class="tags">
          <span class="tag cat">${escapeText(track.category)}</span>
          <span class="tag diff-Core">${escapeText(track.difficulty || "Core")}</span>
        </div>
-       <div class="track-intro">${track.intro}</div>`;
+       <div class="track-intro">${track.intro}</div>` + overviewHtml;
     trackDetailEl.appendChild(header);
 
     // Progress dots
@@ -374,6 +385,41 @@
       s.appendChild(content);
       synthWrap.appendChild(s);
 
+      if (track.checkpoints && track.checkpoints.length) {
+        const cp = document.createElement("div");
+        cp.className = "checkpoints";
+        const cpBadge = document.createElement("div");
+        cpBadge.className = "checkpoints-badge";
+        cpBadge.textContent = "Check yourself · retrieval practice";
+        cp.appendChild(cpBadge);
+        const cpBody = document.createElement("div");
+        cpBody.className = "checkpoints-body";
+        track.checkpoints.forEach((c, idx) => {
+          const item = document.createElement("div");
+          item.className = "checkpoint";
+          const q = document.createElement("div");
+          q.className = "check-q";
+          q.innerHTML = `<strong>Q${idx + 1}.</strong> ${c.q}`;
+          const btn = document.createElement("button");
+          btn.className = "btn";
+          btn.textContent = "Show answer";
+          const a = document.createElement("div");
+          a.className = "check-a";
+          a.hidden = true;
+          a.innerHTML = c.a;
+          btn.addEventListener("click", () => {
+            a.hidden = false;
+            btn.disabled = true;
+          });
+          item.appendChild(q);
+          item.appendChild(btn);
+          item.appendChild(a);
+          cpBody.appendChild(item);
+        });
+        cp.appendChild(cpBody);
+        synthWrap.appendChild(cp);
+      }
+
       revealed = track.steps.length;
       setTrackProgress(track, revealed, true);
       refreshDots(-1);
@@ -393,9 +439,23 @@
         `<span class="step-title">${escapeText(step.title)}</span>`;
       el.appendChild(head);
 
+      if (step.brief) {
+        const brief = document.createElement("div");
+        brief.className = "step-brief";
+        brief.innerHTML =
+          `<div class="brief-label">Concept</div>` +
+          `<div class="brief-body">${step.brief}</div>`;
+        el.appendChild(brief);
+      }
+
+      const chLabel = document.createElement("div");
+      chLabel.className = "challenge-label";
+      chLabel.textContent = "Your turn";
+      el.appendChild(chLabel);
+
       const prompt = document.createElement("div");
       prompt.className = "prompt";
-      prompt.innerHTML = step.prompt;
+      prompt.innerHTML = step.challenge || step.prompt || "";
       el.appendChild(prompt);
 
       if (step.diagram) {
@@ -416,7 +476,7 @@
         dlab.textContent = "What you discovered";
         const dtext = document.createElement("div");
         dtext.className = "discovered-text";
-        dtext.textContent = step.discovered;
+        dtext.textContent = step.insight || step.discovered || "";
         discovered.appendChild(dlab);
         discovered.appendChild(dtext);
         revealZone.appendChild(discovered);
@@ -429,16 +489,24 @@
         const actions = document.createElement("div");
         actions.className = "actions";
 
-        if (step.hint) {
-          let hintShown = false;
+        const hints = step.hints || (step.hint ? [step.hint] : []);
+        if (hints.length) {
+          let shown = 0;
           const hintBtn = document.createElement("button");
           hintBtn.className = "btn";
           hintBtn.textContent = "Show a hint";
           hintBtn.addEventListener("click", () => {
-            if (hintShown) return;
-            hintShown = true;
-            hintBtn.disabled = true;
-            revealZone.appendChild(makeReveal("hint", "Hint", escapeToHtml(step.hint)));
+            if (shown >= hints.length) return;
+            revealZone.appendChild(
+              makeReveal("hint", `Hint ${shown + 1}`, escapeToHtml(hints[shown]))
+            );
+            shown += 1;
+            if (shown >= hints.length) {
+              hintBtn.disabled = true;
+              hintBtn.textContent = "No more hints";
+            } else {
+              hintBtn.textContent = "Next hint";
+            }
           });
           actions.appendChild(hintBtn);
         }
