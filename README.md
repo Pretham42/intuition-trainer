@@ -3,9 +3,9 @@
 A dependency-free static site that trains problem-solving *intuition*, not answer recall.
 It has two modes:
 
-- **Puzzles** — each gives you the problem, up to three escalating hints, and a full
+- **Puzzles** — each gives you the problem, two escalating hints, and a full
   solution, then the key feature: **the question you could have asked yourself** to reach
-  the answer, plus the transferable lesson behind it. 58 problems and counting.
+  the answer, plus the transferable lesson behind it. 65 problems and counting, each with escalating hints that guide without giving away the answer.
 - **Discovery Tracks** — guided lessons that lead you to *rediscover* a core concept
   yourself. Each follows a **lecture + problem-solving** rhythm (see [`FRAMEWORK.md`](FRAMEWORK.md)):
   every step opens with a short *Concept* brief (the tool you need), then a *Your turn*
@@ -13,11 +13,14 @@ It has two modes:
   Each track carries an *overview* (goal, prerequisites, objectives, time) and ends with
   *checkpoints* (active-recall self-tests). Current tracks: Rediscovering Backpropagation,
   Loss Functions, Gradient Descent & the Learning Rate, Attention, Molecular Dynamics,
-  Dynamic Programming, and Big-O.
+  Dynamic Programming, Big-O, Entropy & Information, and Diffusion Models.
 
 Problems span the areas that matter for AI / CS / computational-biology interviews:
 algorithms & data structures, probability, ML/AI conceptual reasoning, quantitative
 biology, estimation (Fermi), logic, and game theory.
+
+A floating **Scratchpad** whiteboard (pen, eraser, colors, undo, clear, download) lets you
+work out problems directly on the page; it saves to `localStorage` and survives refresh.
 
 ## Run it locally
 
@@ -52,7 +55,7 @@ Everything lives in `problems.js`. Append an object to the `PROBLEMS` array:
   difficulty: "Easy",              // "Easy" | "Medium" | "Hard"
   prompt: `<p>The question, as HTML.</p>`,
   diagram: `<svg ...>...</svg>`,    // optional inline SVG
-  hints: ["first nudge", "sharper", "almost the answer"],  // 1–3
+  hints: ["a first nudge toward the reframing", "a sharper nudge — but NOT the answer"], // keep the solution out of the hints
   solution: `<p>Full worked answer, HTML.</p>`,
   probe: "The single question you could have asked yourself.",
   lesson: "The transferable takeaway / pattern."
@@ -73,21 +76,26 @@ Tracks live in `tracks.js`. Append an object to the `TRACKS` array:
   category: "ML / AI",           // or Algorithms, etc.
   difficulty: "Core",
   blurb: "One-line summary for the track card.",
-  intro: `<p>Framing shown before step 1 (HTML).</p>`,
+  overview: { goal: `...`, prerequisites: `...`, objectives: [`...`], time: `25–35 min` },
+  intro: `<p>Motivating hook shown before step 1 (HTML).</p>`,
   steps: [
     {
       title: "Short step name",
-      prompt: `<p>The question that makes them derive the next piece (HTML).</p>`,
+      brief: `<p>The mini-lecture: the ONE tool this step needs (not the answer).</p>`,
+      challenge: `<p>The question that makes them derive the next piece (HTML).</p>`,
       diagram: `<svg ...>...</svg>`,   // optional
-      hint: "One optional nudge (backticks -> <code>).",
-      reveal: `<p>The worked answer for this step (HTML).</p>`,
-      discovered: "The one-sentence insight they just uncovered."
+      hints: ["a nudge", "a sharper nudge"],   // optional, 1–3
+      reveal: `<p>The full work-through for this step (HTML).</p>`,
+      insight: "The one-sentence transferable takeaway."
     }
     // ...more steps
   ],
   synthesis: `<p>'Here's what you rebuilt, and it IS the concept' (HTML).</p>`,
+  checkpoints: [ { q: "recall question", a: `<p>answer (HTML)</p>` } ],
   connects: `<p>Optional: links to related tracks/puzzles (HTML).</p>`
 }
+
+See `FRAMEWORK.md` for the full lecture+problem design the tracks follow.
 ```
 
 Steps reveal progressively — the next step only appears after the learner works through
@@ -100,4 +108,6 @@ progress are both saved in `localStorage`.
 - `style.css` — styling (dark theme, responsive)
 - `problems.js` — the puzzle bank (edit this to add puzzles)
 - `tracks.js` — the discovery-track bank (edit this to add tracks)
+- `whiteboard.js` — the floating Scratchpad (self-contained)
+- `FRAMEWORK.md` — the lecture+problem design every track follows
 - `app.js` — rendering, view switching, filters, progressive hints/steps, `localStorage` progress

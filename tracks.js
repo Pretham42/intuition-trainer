@@ -767,5 +767,183 @@ const TRACKS = [
       }
     ],
     connects: `<p>Related puzzles: <code>Why comparison sorting can't beat n log n</code> (a Big-O lower bound), <code>Twelve coins, one fake, three weighings</code> and <code>Trailing zeros of 100!</code> (logs and bottlenecks). The <strong>Dynamic Programming</strong> track turns exponential into polynomial.</p>`
+  },
+
+  {
+    id: "entropy-information",
+    title: "Rediscovering Entropy & Information",
+    category: "ML / AI",
+    difficulty: "Core",
+    blurb: "Derive Shannon's measure of information from scratch — and see why cross-entropy is the natural loss for learning.",
+    overview: {
+      goal: `Build information and entropy from 'how surprising is an event?', and connect them to compression, questions, and the cross-entropy loss.`,
+      prerequisites: `Logs and basic probability. The Loss Functions track pairs naturally.`,
+      objectives: [
+        `Explain why information is -log(probability)`,
+        `Compute the entropy of a distribution and read it as 'average bits'`,
+        `State why entropy lower-bounds compression and yes/no questions`,
+        `Explain cross-entropy and KL divergence, and why minimizing cross-entropy trains a model`
+      ],
+      time: `25–35 min`
+    },
+    intro: `<p>What <em>is</em> information, measured in numbers? You'll derive Shannon's answer from one intuition — information is surprise — and watch it turn into entropy, the floor on compression and on the questions needed to pin down an outcome. Then you'll see that the cross-entropy everyone trains classifiers with is just 'the extra bits you pay for having the wrong model.'</p>`,
+    steps: [
+      {
+        title: "Measuring surprise",
+        brief: `<p>Intuitively, learning that a <em>certain</em> event happened tells you nothing, while a <em>rare</em> event is very informative. So a measure of an event's information should depend only on its probability <code>p</code>: it should be 0 when <code>p = 1</code>, grow as <code>p</code> shrinks, and — crucially — the info from two <em>independent</em> events should <strong>add</strong>.</p>`,
+        challenge: `<p>You want a function <code>I(p)</code> with <code>I(1) = 0</code>, decreasing in <code>p</code>, and <code>I(p·q) = I(p) + I(q)</code> for independent events. What function of <code>p</code> satisfies the additivity requirement?</p>`,
+        hints: [
+          "You need something that turns a PRODUCT of probabilities into a SUM. What operation does that?",
+          "Logarithms: log(pq) = log p + log q. Now fix the sign and it decreases as p shrinks."
+        ],
+        reveal: `<p>The additivity <code>I(pq) = I(p) + I(q)</code> forces a logarithm, and to make it non-negative and decreasing we take <code>I(p) = −log p</code>. Using base 2 measures information in <strong>bits</strong>: an event of probability <code>1/2</code> carries <code>−log₂(1/2) = 1</code> bit; probability <code>1/1000</code> carries about 10 bits. Independent surprises add, exactly as required.</p>`,
+        insight: "Information is −log(probability). The log is forced by one demand — that independent events' information add — and the base sets the unit (base 2 = bits)."
+      },
+      {
+        title: "Entropy = average surprise",
+        brief: `<p>A single event's information is <code>−log p</code>. For a whole distribution, the natural summary is the <em>average</em> information you expect to receive — that average is the <strong>entropy</strong>.</p>`,
+        challenge: `<p>Write the expected information (entropy <code>H</code>) of a distribution <code>{pᵢ}</code>. Then compute it for a fair coin and for a fair 8-sided die.</p>`,
+        hints: [
+          "Average = sum of (probability × that outcome's information).",
+          "For a uniform distribution over N outcomes each pᵢ = 1/N, so each carries log₂ N bits."
+        ],
+        reveal: `<p>Entropy is the probability-weighted average of <code>−log pᵢ</code>: <code>H = −Σᵢ pᵢ log₂ pᵢ</code>. A fair coin: <code>−(½log₂½ + ½log₂½) = 1</code> bit. A fair 8-sided die: <code>log₂ 8 = 3</code> bits. In general a uniform distribution over <code>2ᵏ</code> outcomes has entropy <code>k</code> bits — which is exactly the poisoned-wine puzzle: 1000 ≈ 2¹⁰ bottles need ~10 bits.</p>`,
+        insight: "Entropy is the average number of bits an outcome carries. For 2^k equally likely outcomes it's exactly k bits — the same bit-counting behind the coin-weighing and poisoned-wine puzzles."
+      },
+      {
+        title: "Entropy is a floor",
+        brief: `<p>Shannon's theorems make entropy concrete: you cannot compress a source below <code>H</code> bits per symbol on average, and the average number of yes/no questions needed to identify an outcome can't beat <code>H</code> either.</p>`,
+        challenge: `<p>You must identify one of 8 equally likely outcomes with yes/no questions — what's the minimum average number? Now suppose the outcomes are very <em>unequal</em> (one has probability ½). Can you do better on average, and what bounds you?</p>`,
+        hints: [
+          "For 8 equally likely outcomes, each good question should split the remaining possibilities in half.",
+          "When outcomes are unequal, ask about the likely ones first (short codes for common symbols) — but you can never beat H on average."
+        ],
+        reveal: `<p>Eight equally likely outcomes need <code>log₂ 8 = 3</code> questions (halve each time). When probabilities are unequal you can do better on average by giving common outcomes shorter question-paths (Huffman coding) — but the average is bounded below by the entropy <code>H</code>. Entropy is the fundamental floor on both compression and questions.</p>`,
+        insight: "Entropy lower-bounds the average bits (or yes/no questions) needed to pin down an outcome. 'Halve the possibilities each step' is optimal only when outcomes are equally likely; otherwise skew toward the likely ones."
+      },
+      {
+        title: "Paying for the wrong model: cross-entropy",
+        brief: `<p>Optimal codes assign length <code>−log p</code> to an outcome of true probability <code>p</code>. But suppose you don't know the true distribution <code>p</code> and instead encode using a <em>model</em> <code>q</code> — assigning lengths <code>−log q</code>. Your average cost is the <strong>cross-entropy</strong> <code>H(p,q) = −Σ p log q</code>.</p>`,
+        challenge: `<p>Using the model <code>q</code> instead of the true <code>p</code>, how much <em>extra</em> cost do you pay above the ideal entropy <code>H(p)</code>? When is that extra cost zero?</p>`,
+        hints: [
+          "Subtract the ideal cost H(p) from the actual cost H(p,q) and simplify.",
+          "You'll get Σ p log(p/q) — a quantity that's always ≥ 0."
+        ],
+        reveal: `<p>The extra cost is <code>H(p,q) − H(p) = Σ p log(p/q)</code>, the <strong>Kullback–Leibler divergence</strong> <code>D(p‖q) ≥ 0</code>, which is zero <em>iff</em> <code>q = p</code>. So <code>cross-entropy = true entropy + KL penalty for being wrong</code>. Using the wrong model always costs extra bits, and the penalty vanishes only when your model matches reality.</p>`,
+        insight: "Cross-entropy = the data's own entropy + a KL-divergence penalty for using the wrong model. That penalty is ≥ 0 and zero only when your model equals the true distribution."
+      },
+      {
+        title: "Why cross-entropy is the ML loss",
+        brief: `<p>A classifier outputs a predicted distribution <code>q</code> over labels; the data has a true distribution <code>p</code> (often a one-hot label). Training adjusts the model to make its guesses match reality.</p>`,
+        challenge: `<p>In information terms, what does <em>minimizing the cross-entropy loss</em> actually do to the model, and why is that the same as maximum likelihood?</p>`,
+        hints: [
+          "Since H(p) is fixed by the data, minimizing H(p,q) is minimizing what?",
+          "Driving the KL penalty to zero pushes q toward p."
+        ],
+        reveal: `<p>Since the data's entropy <code>H(p)</code> is fixed, minimizing cross-entropy <code>H(p,q)</code> is exactly minimizing the KL divergence <code>D(p‖q)</code> — pushing the model's distribution <code>q</code> toward the true <code>p</code>. That's identical to maximizing the likelihood of the data (the Loss Functions track derived the same loss from likelihood). Your model is literally learning the shortest code for the data.</p>`,
+        insight: "Minimizing the cross-entropy loss minimizes KL divergence — it forces the model's predicted distribution toward the true one, which is exactly maximum likelihood."
+      }
+    ],
+    synthesis: `<p>You rebuilt information theory from one idea. <strong>Information</strong> is <code>−log p</code> (surprise, made additive by the log). <strong>Entropy</strong> is its average — the floor on compression and on yes/no questions. <strong>Cross-entropy</strong> is what you pay when you encode with a wrong model <code>q</code>, and it splits into the data's entropy plus a non-negative <strong>KL</strong> penalty. Minimizing that penalty — the everyday classification loss — drives your model toward the truth.</p>`,
+    checkpoints: [
+      {
+        q: "Why must information be −log(probability), rather than, say, 1 − p?",
+        a: `<p>Because information from independent events must add: <code>I(pq) = I(p) + I(q)</code>. Only a logarithm turns the product of independent probabilities into a sum, and the minus sign makes rarer (smaller-p) events more informative while <code>I(1) = 0</code>.</p>`
+      },
+      {
+        q: "In information terms, what does minimizing the cross-entropy loss do to a model?",
+        a: `<p>It minimizes the KL divergence <code>D(p‖q)</code> between the true data distribution <code>p</code> and the model's predictions <code>q</code> (since the data's entropy is fixed), pushing <code>q</code> toward <code>p</code> — equivalently, maximum likelihood.</p>`
+      }
+    ],
+    connects: `<p>Deeply tied to the <strong>Loss Functions</strong> track (cross-entropy from likelihood). The bit-counting appears in the puzzles <code>1000 bottles, one poisoned</code>, <code>Twelve coins, one fake</code>, and <code>Why comparison sorting can't beat n log n</code>.</p>`
+  },
+
+  {
+    id: "diffusion-models",
+    title: "Rediscovering Diffusion Models",
+    category: "ML / AI",
+    difficulty: "Core",
+    blurb: "Build the idea behind modern image generators (Stable Diffusion, DALL·E) — turning noise into images through many easy denoising steps.",
+    overview: {
+      goal: `Understand how diffusion models generate data: a fixed noising process, a learned denoiser, and why breaking generation into many small steps is the whole trick.`,
+      prerequisites: `The idea of training a network by regression, and Gaussian noise. The Gradient Descent and Loss Functions tracks help.`,
+      objectives: [
+        `Explain why generation is split into many small steps`,
+        `Say what the forward (noising) process buys you`,
+        `Describe how the learned denoiser generates a new sample`,
+        `Explain why many small reverse steps are tractable when one big jump isn't`
+      ],
+      time: `25–35 min`
+    },
+    intro: `<p>How does a model conjure a photorealistic image from nothing? You'll rebuild the diffusion idea behind Stable Diffusion and DALL·E. The insight is almost a puzzle: destroying data with noise, on purpose, is what makes learning to <em>create</em> data possible.</p>`,
+    steps: [
+      {
+        title: "Generation is too hard in one leap",
+        brief: `<p>We want to sample brand-new images from the (enormously complex) distribution of real images — one we can't write down. Learning a single function that maps random noise straight to a realistic image is notoriously hard to train.</p>`,
+        challenge: `<p>If mapping noise → image in one shot is too hard, what general strategy from the rest of these tracks might make it learnable instead?</p>`,
+        hints: [
+          "Recall how backprop, DP, and gradient descent all tame hard problems.",
+          "Break one impossibly hard transformation into many small, easy ones."
+        ],
+        reveal: `<p>Break the single hard leap into <strong>many small, easy steps</strong>. Instead of jumping from noise to image at once, we'll learn to take a slightly-noisy image and make it slightly cleaner — then repeat. Composing many easy steps builds the complex result, the same 'decompose into tractable pieces' move behind dynamic programming and gradient descent.</p>`,
+        insight: "A hard one-shot generation becomes tractable when decomposed into many small, individually-easy steps — the recurring 'small steps' theme across these tracks."
+      },
+      {
+        title: "The forward process: destroy data on purpose",
+        brief: `<p>Define a <em>fixed</em> (not learned) forward process that takes a real image and adds a little Gaussian noise, repeatedly, over many steps <code>T</code>, until it's indistinguishable from pure noise.</p>`,
+        challenge: `<p>Why would deliberately corrupting real images with noise help you <em>learn to generate</em> them? What two useful things does this fixed process hand you?</p>`,
+        hints: [
+          "At every noise level you now have a pair: the noisy image and the clean one it came from.",
+          "And where does the process end up — what distribution is the fully-noised image drawn from?"
+        ],
+        reveal: `<p>The forward noising process gives you two gifts. First, at every step it manufactures <strong>training pairs</strong> for free — a noisy image and the (known) noise that was added — so learning to denoise is ordinary supervised regression. Second, it ends at a <strong>simple, known distribution</strong> (pure Gaussian noise) that you can trivially sample from to start generation.</p>`,
+        insight: "A fixed forward noising process manufactures unlimited (noisy, clean) training pairs and ends at a trivial Gaussian distribution you can sample — turning generation into supervised denoising."
+      },
+      {
+        title: "Learn to undo one step, then generate",
+        brief: `<p>Train a single network to look at a noisy image (and which noise level it's at) and predict the noise that was added — equivalently, a slightly cleaner image. This is just regression with a mean-squared-error loss.</p>`,
+        challenge: `<p>Once the network can remove a little noise from any noisy image, how do you use it to generate a completely new image that was never in the training set?</p>`,
+        hints: [
+          "You have a trivial way to get a fully-noised sample — just draw Gaussian noise.",
+          "Apply the denoiser over and over, walking the forward process backward."
+        ],
+        reveal: `<p><strong>Start from pure Gaussian noise</strong> (free to sample) and apply the learned denoiser repeatedly, step by step, each time removing a little noise, until a clean image emerges. Because the starting noise is random, each run produces a new, original image drawn from the learned data distribution. Generation is just the forward noising process run in reverse by the network.</p>`,
+        insight: "To generate, start from pure noise and iteratively denoise. Each step is an easy regression, and the random starting noise makes every generated sample new."
+      },
+      {
+        title: "Why many small steps are the whole trick",
+        brief: `<p>Reversing the <em>entire</em> noising in one shot would be exactly as hard as the original noise-to-image problem. The magic is in the step size.</p>`,
+        challenge: `<p>Why is reversing the process in many tiny steps learnable, when a single noise-to-image jump isn't? Think about what a <em>small</em> amount of added noise does to the reverse step.</p>`,
+        hints: [
+          "For a tiny noise increment, how different is the 'before' image from the 'after'?",
+          "A small, near-Gaussian change is something a simple network can model; a huge arbitrary jump isn't."
+        ],
+        reveal: `<p>When each forward step adds only a <em>little</em> noise, the corresponding reverse step is a small, nearly <strong>Gaussian</strong> correction — simple enough for a network to model accurately. A single giant jump from pure noise to a specific image is an arbitrarily complex mapping; a thousand tiny, near-Gaussian denoising steps are each easy, and composing them reconstructs the full complex distribution. Small steps convert an intractable transform into many tractable ones.</p>`,
+        insight: "For small noise increments each reverse step is approximately Gaussian and easy to learn; composing many such steps builds a complex distribution that no single jump could."
+      },
+      {
+        title: "Steering it: text-to-image",
+        brief: `<p>So far the model generates <em>some</em> plausible image. To make it match a prompt, you condition the denoiser on extra information (a text embedding) and nudge each step toward that condition — the core of classifier-free guidance.</p>`,
+        challenge: `<p>At a high level, how do you get the denoiser to produce an image matching a text prompt like "a red bicycle"?</p>`,
+        hints: [
+          "Give the denoiser the prompt as an extra input at every step.",
+          "Then push each step more strongly toward the prompt-conditioned prediction."
+        ],
+        reveal: `<p>Feed the text embedding into the denoiser as an extra input, so at every step it predicts the noise to remove <em>given the prompt</em>. Then amplify the difference between the prompt-conditioned and unconditioned predictions (guidance) to push samples firmly toward the text. Because every denoising step is steered, the whole trajectory ends at an image matching the prompt — that's text-to-image.</p>`,
+        insight: "Conditioning the per-step denoiser on a text embedding (and amplifying toward it) steers the entire generation trajectory — the basis of text-to-image models."
+      }
+    ],
+    synthesis: `<p>You rebuilt diffusion models. A <strong>fixed forward process</strong> gradually noises real images, manufacturing supervised (noisy, clean) pairs and ending at pure Gaussian noise. A single <strong>learned denoiser</strong> undoes one small step; to generate, you start from noise and denoise repeatedly. The key is that <strong>small steps</strong> make each reverse move near-Gaussian and easy, so many of them compose into a complex image distribution. <strong>Conditioning</strong> the denoiser on text steers the result — text-to-image.</p>`,
+    checkpoints: [
+      {
+        q: "Why does a diffusion model add noise to training images on purpose?",
+        a: `<p>The fixed noising process creates free supervised training pairs (a noisy image and the noise added) at every level, turning generation into ordinary denoising regression — and it ends at a simple Gaussian distribution that's trivial to sample from when you start generating.</p>`
+      },
+      {
+        q: "Why break generation into many small denoising steps instead of one big jump?",
+        a: `<p>A single map from pure noise to a specific image is an arbitrarily complex function that's hard to learn. When each step removes only a little noise, each reverse step is a small, nearly Gaussian correction that a simple network can model well; composing many easy steps reconstructs the complex distribution.</p>`
+      }
+    ],
+    connects: `<p>The denoiser is trained by <strong>Gradient Descent</strong> on a <strong>Loss Functions</strong>-style regression objective. The 'many small steps beat one big jump' theme echoes <strong>Dynamic Programming</strong> and <strong>Backpropagation</strong>. Related puzzle: <code>The bacteria that fill the jar at noon</code> (thinking in incremental processes).</p>`
   }
 ];
