@@ -72,6 +72,51 @@
     return wrap;
   }
 
+  // Multiple-choice checkpoint with instant feedback (Brilliant-style).
+  function renderQuiz(qz, onSolved) {
+    const box = document.createElement("div");
+    box.className = "quiz";
+    const q = document.createElement("div");
+    q.className = "quiz-q";
+    q.innerHTML = `<span class="quiz-tag">Check</span>` + (qz.question || "");
+    box.appendChild(q);
+    const opts = document.createElement("div");
+    opts.className = "quiz-opts";
+    const fb = document.createElement("div");
+    fb.className = "quiz-feedback";
+    fb.hidden = true;
+    let solved = false;
+    (qz.options || []).forEach((opt) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "quiz-opt";
+      b.innerHTML = opt.text;
+      b.addEventListener("click", () => {
+        if (solved) return;
+        if (opt.correct) {
+          solved = true;
+          b.classList.add("correct");
+          opts.querySelectorAll(".quiz-opt").forEach((x) => (x.disabled = true));
+          fb.className = "quiz-feedback ok";
+          fb.innerHTML =
+            `<strong>Correct.</strong> ` + (opt.feedback ? opt.feedback + " " : "") + (qz.explain || "");
+          fb.hidden = false;
+          if (onSolved) onSolved();
+        } else {
+          b.classList.add("wrong");
+          b.disabled = true;
+          fb.className = "quiz-feedback no";
+          fb.innerHTML = `<strong>Not quite.</strong> ` + (opt.feedback || "Try another.");
+          fb.hidden = false;
+        }
+      });
+      opts.appendChild(b);
+    });
+    box.appendChild(opts);
+    box.appendChild(fb);
+    return box;
+  }
+
   /* ================= PUZZLES ================= */
 
   function categories() {
@@ -428,6 +473,11 @@
     // Render one step. mode: "revealed" (already done) or "active" (interactive)
     function renderStep(i, mode) {
       const step = track.steps[i];
+      const extras =
+        (window.TRACK_EXTRAS && TRACK_EXTRAS[track.id] && TRACK_EXTRAS[track.id].steps &&
+          TRACK_EXTRAS[track.id].steps[i]) || {};
+      const quizzes = extras.quizzes || (extras.quiz ? [extras.quiz] : []);
+
       const el = document.createElement("div");
       el.className = "step-card";
       el.id = "step-" + track.id + "-" + i;
@@ -448,15 +498,25 @@
         el.appendChild(brief);
       }
 
-      const chLabel = document.createElement("div");
-      chLabel.className = "challenge-label";
-      chLabel.textContent = "Your turn";
-      el.appendChild(chLabel);
+      // Interactive figure (Brilliant-style manipulable diagram)
+      if (extras.interactive && window.INTERACTIVES && INTERACTIVES[extras.interactive]) {
+        const fig = document.createElement("div");
+        fig.className = "interactive";
+        try { INTERACTIVES[extras.interactive](fig); }
+        catch (e) { fig.innerHTML = ""; }
+        if (fig.childNodes.length) el.appendChild(fig);
+      }
 
-      const prompt = document.createElement("div");
-      prompt.className = "prompt";
-      prompt.innerHTML = step.challenge || step.prompt || "";
-      el.appendChild(prompt);
+      if (step.challenge || step.prompt) {
+        const chLabel = document.createElement("div");
+        chLabel.className = "challenge-label";
+        chLabel.textContent = "Your turn";
+        el.appendChild(chLabel);
+        const prompt = document.createElement("div");
+        prompt.className = "prompt";
+        prompt.innerHTML = step.challenge || step.prompt || "";
+        el.appendChild(prompt);
+      }
 
       if (step.diagram) {
         const dia = document.createElement("div");
@@ -468,7 +528,9 @@
       const revealZone = document.createElement("div");
 
       function doReveal() {
-        revealZone.appendChild(makeReveal("solution", "Work it through", step.reveal));
+        if (step.reveal) {
+          revealZone.appendChild(makeReveal("solution", "Work it through", step.reveal));
+        }
         const discovered = document.createElement("div");
         discovered.className = "discovered";
         const dlab = document.createElement("div");
@@ -485,57 +547,85 @@
       if (mode === "revealed") {
         doReveal();
         el.appendChild(revealZone);
-      } else {
-        const actions = document.createElement("div");
-        actions.className = "actions";
+        return el;
+      }
 
-        const hints = step.hints || (step.hint ? [step.hint] : []);
-        if (hints.length) {
-          let shown = 0;
-          const hintBtn = document.createElement("button");
-          hintBtn.className = "btn";
-          hintBtn.textContent = "Show a hint";
-          hintBtn.addEventListener("click", () => {
-            if (shown >= hints.length) return;
-            revealZone.appendChild(
-              makeReveal("hint", `Hint ${shown + 1}`, escapeToHtml(hints[shown]))
-            );
-            shown += 1;
-            if (shown >= hints.length) {
-              hintBtn.disabled = true;
-              hintBtn.textContent = "No more hints";
-            } else {
-              hintBtn.textContent = "Next hint";
-            }
-          });
-          actions.appendChild(hintBtn);
-        }
+      // ----- active mode -----
+      let quizzesLeft = quizzes.length;
+      if (quizzes.length) {
+        const qWrap = document.createElement("div");
+        qWrap.className = "quiz-wrap";
+        quizzes.forEach((qz) => {
+          qWrap.appendChild(renderQuiz(qz, () => {
+            quizzesLeft -= 1;
+            updateGate();
+          }));
+        });
+        el.appendChild(qWrap);
+      }
 
-        const revealBtn = document.createElement("button");
-        revealBtn.className = "btn primary";
-        revealBtn.textContent = "Work it through";
-        revealBtn.addEventListener("click", () => {
-          revealBtn.disabled = true;
-          doReveal();
-          if (i + 1 > revealed) {
-            revealed = i + 1;
-            setTrackProgress(track, revealed, revealed >= track.steps.length);
-          }
-          // advance
-          if (i + 1 < track.steps.length) {
-            const next = renderStep(i + 1, "active");
-            stepsWrap.appendChild(next);
-            refreshDots(i + 1);
-            next.scrollIntoView({ behavior: "smooth", block: "start" });
+      const actions = document.createElement("div");
+      actions.className = "actions";
+
+      const hints = step.hints || (step.hint ? [step.hint] : []);
+      if (hints.length) {
+        let shown = 0;
+        const hintBtn = document.createElement("button");
+        hintBtn.className = "btn";
+        hintBtn.textContent = "Show a hint";
+        hintBtn.addEventListener("click", () => {
+          if (shown >= hints.length) return;
+          revealZone.appendChild(
+            makeReveal("hint", `Hint ${shown + 1}`, escapeToHtml(hints[shown]))
+          );
+          shown += 1;
+          if (shown >= hints.length) {
+            hintBtn.disabled = true;
+            hintBtn.textContent = "No more hints";
           } else {
-            showSynthesis();
-            synthWrap.scrollIntoView({ behavior: "smooth", block: "start" });
+            hintBtn.textContent = "Next hint";
           }
         });
-        actions.appendChild(revealBtn);
-        el.appendChild(revealZone);
-        el.appendChild(actions);
+        actions.appendChild(hintBtn);
       }
+
+      const revealBtn = document.createElement("button");
+      revealBtn.className = "btn primary";
+      revealBtn.textContent = step.reveal ? "Work it through" : "Continue";
+      const gateNote = document.createElement("span");
+      gateNote.className = "gate-note";
+      gateNote.textContent = "Answer the check above to continue";
+
+      function updateGate() {
+        const locked = quizzesLeft > 0;
+        revealBtn.disabled = locked;
+        gateNote.style.display = locked ? "" : "none";
+      }
+      updateGate();
+
+      revealBtn.addEventListener("click", () => {
+        if (revealBtn.disabled) return;
+        revealBtn.disabled = true;
+        gateNote.style.display = "none";
+        doReveal();
+        if (i + 1 > revealed) {
+          revealed = i + 1;
+          setTrackProgress(track, revealed, revealed >= track.steps.length);
+        }
+        if (i + 1 < track.steps.length) {
+          const next = renderStep(i + 1, "active");
+          stepsWrap.appendChild(next);
+          refreshDots(i + 1);
+          next.scrollIntoView({ behavior: "smooth", block: "start" });
+        } else {
+          showSynthesis();
+          synthWrap.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      });
+      actions.appendChild(revealBtn);
+      actions.appendChild(gateNote);
+      el.appendChild(revealZone);
+      el.appendChild(actions);
       return el;
     }
 

@@ -11,7 +11,7 @@ It has two modes:
   every step opens with a short *Concept* brief (the tool you need), then a *Your turn*
   challenge you work out, escalating hints, a full work-through, and a one-line **insight**.
   Each track carries an *overview* (goal, prerequisites, objectives, time) and ends with
-  *checkpoints* (active-recall self-tests). Current tracks: Rediscovering Backpropagation,
+  *checkpoints* (active-recall self-tests). Steps can also carry **interactive figures** you drag to explore and **multiple-choice checks** with instant feedback that gate progress — a Brilliant.com-style learn-by-doing loop (see `interactives.js` / `track-extras.js`). Current tracks: Rediscovering Backpropagation,
   Loss Functions, Gradient Descent & the Learning Rate, Attention, Molecular Dynamics,
   Dynamic Programming, Big-O, Entropy & Information, and Diffusion Models.
 
@@ -108,6 +108,8 @@ progress are both saved in `localStorage`.
 - `style.css` — styling (dark theme, responsive)
 - `problems.js` — the puzzle bank (edit this to add puzzles)
 - `tracks.js` — the discovery-track bank (edit this to add tracks)
+- `interactives.js` — manipulable figures (sliders + live SVG/canvas) for tracks
+- `track-extras.js` — per-step interactive + multiple-choice-check assignments
 - `whiteboard.js` — the floating Scratchpad (self-contained)
 - `FRAMEWORK.md` — the lecture+problem design every track follows
 - `app.js` — rendering, view switching, filters, progressive hints/steps, `localStorage` progress

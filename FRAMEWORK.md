@@ -85,3 +85,35 @@ Every step follows the same rhythm:
 The renderer (`app.js`) is backward-compatible: a step may still use `prompt`/`hint`/
 `discovered` instead of `challenge`/`hints`/`insight`, and `overview`/`brief`/`checkpoints`
 are optional. But new and refactored tracks should use the full schema above.
+
+## Interactive figures & multiple-choice checks (Brilliant-style)
+
+Beyond the base step, two enhancements make a track *learn-by-doing*. They live in
+separate files and are merged in at render time, so `tracks.js` stays clean:
+
+- **Interactive figures** (`interactives.js`) — `INTERACTIVES[key](container)` builds a
+  manipulable SVG/canvas with sliders and a live readout (e.g. drag η on a loss bowl and
+  watch it converge or diverge). Attach one to a step via `track-extras.js`.
+- **Multiple-choice checks** (`track-extras.js`) — a `quiz` with options that grade
+  instantly: wrong answers show feedback and let you retry; the correct answer unlocks the
+  explanation and the "Continue" button. Progression is **gated** on answering, so the
+  learner commits to an answer before moving on.
+
+```js
+// track-extras.js — keyed by track id → step index
+TRACK_EXTRAS = {
+  "gradient-descent": { steps: {
+    3: {
+      interactive: "learning-rate-bowl",     // key in interactives.js
+      quiz: {
+        question: `…`,
+        options: [ { text:`…`, correct:true, feedback:`…` }, … ],
+        explain: `…`
+      }
+    }
+  }}
+};
+```
+
+Author interactives to *illustrate the exact idea* of their step, and MCQs to force the
+one inference that matters — not trivia.
